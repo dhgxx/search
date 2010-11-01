@@ -36,7 +36,8 @@ void walk_through(char *, char *, reg_t *, options_t *);
 void display_usage(void);
 void display_version(void);
 
-void lookup_option(int argc, char *argv[])
+void
+lookup_option(int argc, char *argv[])
 {
   int ch;
   
@@ -51,84 +52,85 @@ void lookup_option(int argc, char *argv[])
 
   while ((ch = getopt_long(argc, argv, "EILPhvn:r:t:", longopts, NULL)) != -1)
 	switch (ch) {
-	  case 'n':
-		bzero(rep->re_str, LINE_MAX);
-		strlcat(rep->re_str, optarg, LINE_MAX);
-		opts->exec_func = exec_name;
+	case 'n':
+	  bzero(rep->re_str, LINE_MAX);
+	  strlcat(rep->re_str, optarg, LINE_MAX);
+	  opts->exec_func = exec_name;
+	  break;
+	case 'r':
+	  bzero(rep->re_str, LINE_MAX);
+	  strlcat(rep->re_str, optarg, LINE_MAX);
+	  opts->exec_func = exec_regex;
+	  break;
+	case 'v':
+	  display_version();
+	  break;
+	case 't':
+	  switch (optarg[0]) {
+	  case 'f':
+		opts->n_type = NT_ISFIFO;
 		break;
-	  case 'r':
-		bzero(rep->re_str, LINE_MAX);
-		strlcat(rep->re_str, optarg, LINE_MAX);
-		opts->exec_func = exec_regex;
+	  case 'c':
+		opts->n_type = NT_ISCHR;
 		break;
-	  case 'v':
-		display_version();
+	  case 'd':
+		opts->n_type = NT_ISDIR;
 		break;
-	  case 't':
-		switch (optarg[0]) {
-		  case 'f':
-			opts->n_type = NT_ISFIFO;
-			break;
-		  case 'c':
-			opts->n_type = NT_ISCHR;
-			break;
-		  case 'd':
-			opts->n_type = NT_ISDIR;
-			break;
-		  case 'b':
-			opts->n_type = NT_ISBLK;
-			break;
-		  case 'l':
-			opts->n_type = NT_ISLNK;
-			opts->stat_func = lstat; 
-			break;
-		  case 's':
-			opts->n_type = NT_ISSOCK;
-			break;
+	  case 'b':
+		opts->n_type = NT_ISBLK;
+		break;
+	  case 'l':
+		opts->n_type = NT_ISLNK;
+		opts->stat_func = lstat; 
+		break;
+	  case 's':
+		opts->n_type = NT_ISSOCK;
+		break;
 #ifndef _OpenBSD_
-		  case 'w':
-			opts->n_type = NT_ISWHT;
-			break;
+	  case 'w':
+		opts->n_type = NT_ISWHT;
+		break;
 #endif
-		  case 'r':
-		  case '\0':
-			opts->n_type = NT_ISREG;
-			break;
-		  default:
-			opts->long_help = 1;
-			display_usage();
-		}
-		break;
-	  case 'E':
-		rep->re_cflag |= REG_EXTENDED;
-		break;
-	  case 'I':
-		rep->re_cflag |= REG_ICASE;
-		break;
-	  case 'L':
-		opts->stat_func = stat;
-		break;
-	  case 'P':
-		break;
-	  case 'h':
-		opts->long_help = 1;
+	  case 'r':
+	  case '\0':
+		opts->n_type = NT_ISREG;
 		break;
 	  default:
+		opts->long_help = 1;
 		display_usage();
-		break;
+	  }
+	  break;
+	case 'E':
+	  rep->re_cflag |= REG_EXTENDED;
+	  break;
+	case 'I':
+	  rep->re_cflag |= REG_ICASE;
+	  break;
+	case 'L':
+	  opts->stat_func = stat;
+	  break;
+	case 'P':
+	  break;
+	case 'h':
+	  opts->long_help = 1;
+	  break;
+	default:
+	  display_usage();
+	  break;
 	}
 }
 
-node_t tell_type(char *node_name)
+node_t
+tell_type(char *node_name)
 {
   struct stat stbuf;
   int tmp;
   
   tmp = opts->stat_func(node_name, &stbuf);
   
-  if (tmp < 0 )
+  if (tmp < 0 ) {
 	return NT_ERROR;
-  else {
+  } else {
 	if (S_ISBLK(stbuf.st_mode)) return NT_ISBLK;
 	if (S_ISCHR(stbuf.st_mode)) return NT_ISCHR;
 	if (S_ISDIR(stbuf.st_mode)) return NT_ISDIR;
@@ -143,7 +145,8 @@ node_t tell_type(char *node_name)
   }
 }
 
-int exec_name(char *d_name, reg_t *rep, int n_type, int st_type)
+int
+exec_name(char *d_name, reg_t *rep, int n_type, int st_type)
 {
   int flag, len, matched;
   char *pattern;
@@ -156,10 +159,12 @@ int exec_name(char *d_name, reg_t *rep, int n_type, int st_type)
   if (len == 0)
 	pattern = "*";
   
-  if ( (flag & REG_ICASE) == 0)
+  if ( (flag & REG_ICASE) == 0) {
 	flag = 0;
-  else
+  } else {
 	flag = FNM_CASEFOLD | FNM_PERIOD | FNM_PATHNAME | FNM_NOESCAPE;
+  }
+  
 #ifdef __DEBUG__
   printf("pattern=%s, name=%s\n", pattern, d_name);
 #endif
@@ -170,7 +175,8 @@ int exec_name(char *d_name, reg_t *rep, int n_type, int st_type)
 
 }
 
-void comp_regex(reg_t *rep)
+void
+comp_regex(reg_t *rep)
 {
   int retval, len, cflag;
   regex_t *fmt;
@@ -190,17 +196,21 @@ void comp_regex(reg_t *rep)
   retval = regcomp(fmt, str, cflag);
 
   if (retval != 0) {
-	if (regerror(retval, fmt, msg, LINE_MAX) > 0)
+	
+	if (regerror(retval, fmt, msg, LINE_MAX) > 0) {
 	  (void)fprintf(stderr, "%s: %s: %s\n", opts->prog_name, str, msg);
-	else
+	} else {
 	  (void)fprintf(stderr, "%s: %s: %s\n", opts->prog_name, str, strerror(errno));
+	}
+	
 	regfree(fmt);
 	exit(0);
   }
 }
 
 
-int exec_regex(char *d_name, reg_t *rep, int n_type, int st_type)
+int
+exec_regex(char *d_name, reg_t *rep, int n_type, int st_type)
 {
   int retval, len, matched;
   regex_t *fmt;
@@ -220,10 +230,13 @@ int exec_regex(char *d_name, reg_t *rep, int n_type, int st_type)
   retval = regexec(fmt, d_name, 1, &pmatch, REG_STARTEND);
 
   if (retval != 0 && retval != REG_NOMATCH) {
-	if (regerror(retval, fmt, msg, LINE_MAX) > 0)
+	
+	if (regerror(retval, fmt, msg, LINE_MAX) > 0) {
 	  (void)fprintf(stderr, "%s: %s: %s\n", opts->prog_name, str, msg);
-	else
+	} else {
 	  (void)fprintf(stderr, "%s: %s: %s\n", opts->prog_name, str, strerror(errno));
+	}
+	
 	regfree(fmt);
 	exit(0);
   }
@@ -234,14 +247,16 @@ int exec_regex(char *d_name, reg_t *rep, int n_type, int st_type)
   return ((matched) ? 1 : 0);
 }
 
-void free_regex(reg_t *rep)
+void
+free_regex(reg_t *rep)
 {
   regfree(&(rep->re_fmt));
   free(rep);
   return;
 }
 
-void walk_through(char *n_name, char *d_name, reg_t *rep, options_t *opts)
+void
+walk_through(char *n_name, char *d_name, reg_t *rep, options_t *opts)
 {
   DIR *dirp;
   struct dirent *dir;
@@ -250,7 +265,7 @@ void walk_through(char *n_name, char *d_name, reg_t *rep, options_t *opts)
   
   if ( (st_type = tell_type(n_name)) == NT_ERROR) {
 	(void)fprintf(stderr, "%s: %s: %s\n", opts->prog_name, n_name, strerror(errno));
-		return;
+	return;
   }
   
   n_type = opts->n_type;
@@ -268,13 +283,15 @@ void walk_through(char *n_name, char *d_name, reg_t *rep, options_t *opts)
 	  return;
 	}
 	
-	while ( (dir = readdir(dirp)) != NULL) {
+	while ( (dir = readdir(dirp)) != NULL) {	  
 	  if (strncmp(dir->d_name, ".", 2) != 0 &&
-		strncmp(dir->d_name, "..", 3) != 0) {
+		  strncmp(dir->d_name, "..", 3) != 0) {
 		bzero(tmp_buf, MAXPATHLEN);
 		strlcat(tmp_buf, p_buf, LINE_MAX);
+		
 		if (p_buf[strlen(p_buf) - 1] != '/')
 		  strlcat(tmp_buf, "/", MAXPATHLEN);
+		
 		strlcat(tmp_buf, dir->d_name, LINE_MAX);
 		walk_through(tmp_buf, dir->d_name, rep, opts);
 	  }
@@ -284,7 +301,8 @@ void walk_through(char *n_name, char *d_name, reg_t *rep, options_t *opts)
   return;
 }
 
-void display_usage(void)
+void
+display_usage(void)
 {
   static const char *s_help="usage: %s [-E|-I|-L|-P|-h] [path] [-n|-r ...] [-t ...]\n";
   static const char *l_help="\npossible options:\n\n \
@@ -295,7 +313,7 @@ void display_usage(void)
  -I: case insensitive search, otherwise the specified pattern is\n	\
      interpreted as case sensitive.\n\n								\
  -P: do not follow symbolic links, but return the information the\n \
-     symbolic links themselves, this is the default behaviour.\n\n \
+     symbolic links themselves, this is the default behaviour.\n\n	 \
  -L: follow symbolic links and return the information of the files\n \
      they reference. It is an error if the referenced files do not\n \
      exist.\n\n \
@@ -317,9 +335,9 @@ void display_usage(void)
        `l': symbolic link\n \
        `r': regular file\n \
        `s': socket\n";
-
+  
   (void)fprintf(stderr, s_help, opts->prog_name);
-
+  
   if (opts->long_help) {
 	(void)fprintf(stderr, l_help);
 #ifndef _OpenBSD_
@@ -330,13 +348,13 @@ void display_usage(void)
   exit (0);
 }
 
-void display_version(void)
+void
+display_version(void)
 {
   static const char *version = SEARCH_VERSION;
   static const char *name = SEARCH_NAME;
-
+  
   (void)fprintf(stderr, "%s version %s\n", name, version);
   exit (0);
   
 }
-

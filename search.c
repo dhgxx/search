@@ -29,7 +29,8 @@
 
 void cleanup(int);
 
-int main(int argc, char *argv[])
+int
+main(int argc, char *argv[])
 {
   
   extern char *optarg;
@@ -71,8 +72,9 @@ int main(int argc, char *argv[])
   
   comp_regex(rep);
   
-  for (i = 0; i < argc; i++)
+  for (i = 0; i < argc; i++) {
 	walk_through(argv[i], argv[i], rep, opts);
+  }
   
   free_regex(rep);
   free(opts);
@@ -80,14 +82,18 @@ int main(int argc, char *argv[])
   exit(0);
 }
 
-void cleanup(int sig)
+void
+cleanup(int sig)
 {
   fprintf(stderr, "\nUser interrupted, cleaning up...\n");
   
   if (rep)
 	free_regex(rep);
+  
   if (opts)
 	free(opts);
+  
   if (sig)
 	exit(1);
+
 }
