@@ -343,45 +343,49 @@ display_usage(void)
 {
   static const char *s_help="usage: %s [-E|-I|-L|-P|-h|-v] [path] [-n|-r ...] [-t ...] [--empty]\n";
   static const char *l_help="\npossible options:\n\n \
- -h: this long help.\n\n   							 \
- -v: show version number\n\n                          \
- -E: use modern regular expressions rather than `basic' (obsolete)\n \
-     regular expressions which is the default. See the man page of\n \
-     `re_format(7)' for more information.\n\n                       \
- -I: case insensitive search, otherwise the specified pattern is\n	\
-     interpreted as case sensitive.\n\n								\
- -P: do not follow symbolic links, but return the information the\n \
-     symbolic links themselves, this is the default behaviour.\n\n	 \
- -L: follow symbolic links and return the information of the files\n \
-     they reference. It is an error if the referenced files do not\n \
-     exist.\n\n \
- -n: specify a pattern to match the search results. Special shell\n \
-     pattern matching characters may be used as part of the pattern.\n \
-     Also available as `--name'. See the man page of `fnmatch(3)' for\n \
-     more information.\n\n \
- -r: specify a regular expression to match the search results. Unless\n \
-     the option `-E' is explicitly specified, the regular expression\n \
-     will only be interpreted as `basic' (obsolete) regular expressions.\n \
-     Also available as `--regex'. See the man page of `re_format(7)' for\n \
-     more information.\n\n \
- -t: specify a file type to match the search results. Also available\n \
-     as `--type'. The possible types are as follows:\n\n \
-       `b': block device\n \
-       `c': character special\n \
-       `d': directory\n \
-       `f': fifo\n \
-       `l': symbolic link\n \
-       `r': regular file\n \
-       `s': socket\n\n \
- --empty: find empty files or directories.\n\n";
+short options:\n\n \
+-h:\tthis long help.\n\n \
+-v:\tshow version number\n\n \
+-E:\tuse modern regular expressions rather than `basic' (obsolete)\n \
+\tregular expressions which is the default. See the man page of\n \
+\t`re_format(7)' for more information.\n\n \
+-I:\tcase insensitive search, otherwise the specified pattern is\n \
+\tinterpreted as case sensitive.\n\n \
+-P:\tdo not follow symbolic links, but return the information the\n \
+\tsymbolic links themselves, this is the default behaviour.\n\n \
+-L:\tfollow symbolic links and return the information of the files\n \
+\tthey reference. It is an error if the referenced files do not\n \
+\texist.\n\n \
+-n:\tspecify a pattern to match the search results. Special shell\n \
+\tpattern matching characters may be used as part of the pattern.\n \
+\tAlso available as `--name'. See the man page of `fnmatch(3)' for\n \
+\tmore information.\n\n \
+-r:\tspecify a regular expression to match the search results. Unless\n \
+\tthe option `-E' is explicitly specified, the regular expression\n \
+\twill only be interpreted as `basic' (obsolete) regular expressions.\n \
+\tAlso available as `--regex'. See the man page of `re_format(7)' for\n \
+\tmore information.\n\n \
+-t:\tspecify a file type to match the search results. Also available\n \
+\tas `--type'. The possible types are as follows:\n\n \
+\t\t`b': block device\n \
+\t\t`c': character special\n \
+\t\t`d': directory\n \
+\t\t`f': fifo\n \
+\t\t`l': symbolic link\n \
+\t\t`r': regular file\n \
+\t\t`s': socket\n";
+
+  static const char *l_opts="long options:\n\n \
+--empty:\tfind empty files or directories.\n\n";
   
   (void)fprintf(stderr, s_help, opts->prog_name);
   
   if (opts->long_help) {
 	(void)fprintf(stderr, l_help);
 #ifndef _OpenBSD_
-	(void)fprintf(stderr, "        `w': white out\n");
+	(void)fprintf(stderr, "\t\t`w': white out\n");
 #endif
+	(void)fprintf(stderr, l_opts);
   }
 
   exit (0);
