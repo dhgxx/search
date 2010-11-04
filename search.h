@@ -74,6 +74,7 @@ typedef struct _options_t {
   node_t n_type;
   int re_icase;
   int find_empty;
+  int delete;
   int long_help;
   int (*stat_func)(const char *, struct stat *);
   int (*exec_func)(char *, reg_t *);

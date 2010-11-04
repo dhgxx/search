@@ -60,6 +60,7 @@ main(int argc, char *argv[])
   opts->long_help = 0;
   opts->exec_func = NULL;
   opts->find_empty = 0;
+  opts->delete = 0;
   
   bzero(rep->re_str, LINE_MAX);
   rep->re_cflag =  REG_BASIC;

@@ -36,7 +36,8 @@ void walk_through(char *, char *);
 void display_usage(void);
 void display_version(void);
 
-static int find_empty;
+static int opt_empty;
+static int opt_delete;
 
 void
 lookup_option(int argc, char *argv[])
@@ -47,7 +48,8 @@ lookup_option(int argc, char *argv[])
 	{ "name",    required_argument, NULL,       'n' },
 	{ "regex",   required_argument, NULL,       'r' },
 	{ "type",    required_argument, NULL,       't' },
-	{ "empty",   no_argument,       &find_empty, 1  },
+	{ "empty",   no_argument,       &opt_empty,  1  },
+	{ "delete",  no_argument,       &opt_delete, 1  },
 	{ "help",    no_argument,       NULL,       'h' },
 	{ "version", no_argument,       NULL,       'v' },
 	{ NULL,      0,                 NULL,        0  }
@@ -66,8 +68,12 @@ lookup_option(int argc, char *argv[])
 	  opts->exec_func = exec_regex;
 	  break;
 	case 0:
-	  if (1 == find_empty) {
+	  if (1 == opt_empty) {
 		opts->find_empty = 1;
+	  }
+
+	  if (1 == opt_delete) {
+		opts->delete = 1;
 	  }
 	  break;
 	case 'v':
@@ -285,6 +291,23 @@ walk_through(char *n_name, char *d_name)
 	   node_stat->type == opts->n_type)) {
 
 	found = 1;
+
+	if (1 == opts->delete) {
+	  
+	  if (NT_ISDIR != node_stat->type) {
+
+		if (0 > unlink(p_buf))
+		  (void)fprintf(stderr, "%s: --delete: unlink(%s): %s\n", opts->prog_name, n_name, strerror(errno));
+	 
+	  } else {
+		
+		if (0 > rmdir(p_buf))
+		  (void)fprintf(stderr, "%s: --delete: rmdir(%s): %s\n", opts->prog_name, n_name, strerror(errno));
+	  }
+	  
+	  return;
+	}
+	  
 	
 	if (1 == opts->find_empty) {
 	  
@@ -326,13 +349,14 @@ walk_through(char *n_name, char *d_name)
 	}
 
 	if (1 == found) {
+	  
 	  if (1 == opts->find_empty &&
 		  NT_ISDIR == node_stat->type &&
 		  2 >= ndir) {
 		(void)fprintf(stdout, "%s\n", p_buf);
 	  }
 	}
-	
+
 	closedir(dirp);
   }
   return;
