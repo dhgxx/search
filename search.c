@@ -43,18 +43,23 @@ main(int argc, char *argv[])
   
   rep = malloc(sizeof(reg_t));
   opts = malloc(sizeof(options_t));
+  node_stat = malloc(sizeof(node_stat_t));
   
-  if (rep == NULL || opts == NULL) {
+  if (NULL == rep ||
+	  NULL == opts ||
+	  NULL == node_stat) {
 	(void)fprintf(stderr, "malloc(3): %s.\n", strerror(errno));
 	exit(0);
   }
   
 
-  opts->prog_name = argv[0];		/* `prog_name` is defined in `search.h'. */
+  opts->prog_name = SEARCH_NAME; /* `prog_name` is defined in `search.h'. */
+  opts->prog_version = SEARCH_VERSION;
   opts->n_type = 0;
   opts->stat_func = lstat;
   opts->long_help = 0;
   opts->exec_func = NULL;
+  opts->find_empty = 0;
   
   bzero(rep->re_str, LINE_MAX);
   rep->re_cflag =  REG_BASIC;
@@ -73,11 +78,12 @@ main(int argc, char *argv[])
   comp_regex(rep);
   
   for (i = 0; i < argc; i++) {
-	walk_through(argv[i], argv[i], rep, opts);
+	walk_through(argv[i], argv[i]);
   }
   
   free_regex(rep);
   free(opts);
+  free(node_stat);
   
   exit(0);
 }
@@ -92,6 +98,9 @@ cleanup(int sig)
   
   if (opts)
 	free(opts);
+  
+  if (node_stat)
+	free(node_stat);
   
   if (sig)
 	exit(1);

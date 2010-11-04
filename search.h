@@ -69,15 +69,23 @@ typedef struct _reg_t {
 } reg_t;
 
 typedef struct _options_t {
-  char *prog_name;
+  const char *prog_name;
+  const char *prog_version;
   node_t n_type;
   int re_icase;
+  int find_empty;
   int long_help;
   int (*stat_func)(const char *, struct stat *);
-  int (*exec_func)(char *, reg_t *, int, int);
+  int (*exec_func)(char *, reg_t *);
 } options_t;
+
+typedef struct _node_stat_t {
+  node_t type;
+  off_t size;
+} node_stat_t;
 
 reg_t *rep;
 options_t *opts;
+node_stat_t *node_stat;
 
 #endif	/* _SEARCH_H_ */

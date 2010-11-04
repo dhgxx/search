@@ -28,12 +28,12 @@
  */
 
 extern void lookup_option(int, char **);
-extern node_t tell_type(char *);
+extern int tell_type(char *);
 extern void comp_regex(reg_t *);
-extern int exec_regex(char *, reg_t *, int, int);
-extern int exec_name(char *, reg_t *, int, int);
+extern int exec_regex(char *, reg_t *);
+extern int exec_name(char *, reg_t *);
 extern void free_regex(reg_t *);
-extern void walk_through(char *, char *, reg_t *, options_t *);
+extern void walk_through(char *, char *);
 extern void display_usage(void);
 
 #endif	/* _EXTERN_H_ */
