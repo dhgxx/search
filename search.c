@@ -27,7 +27,7 @@
 #include "search.h"
 #include "extern.h"
 
-void cleanup(int);
+static void cleanup(int);
 
 int
 main(int argc, char *argv[])
@@ -38,20 +38,17 @@ main(int argc, char *argv[])
   
   int i;
   
-  (void)setlocale(LC_ALL, "");
+  (void)setlocale(LC_CTYPE, "");
   signal(SIGINT, cleanup);
   
   rep = malloc(sizeof(reg_t));
   opts = malloc(sizeof(options_t));
   node_stat = malloc(sizeof(node_stat_t));
   
-  if (NULL == rep ||
-	  NULL == opts ||
-	  NULL == node_stat) {
+  if (!rep || !opts || !node_stat) {
 	(void)fprintf(stderr, "malloc(3): %s.\n", strerror(errno));
 	exit(0);
   }
-  
 
   opts->prog_name = SEARCH_NAME; /* `prog_name` is defined in `search.h'. */
   opts->prog_version = SEARCH_VERSION;
@@ -73,7 +70,7 @@ main(int argc, char *argv[])
   if (argc == 0)
 	display_usage();
   
-  if (opts->exec_func == NULL)
+  if (!opts->exec_func)
 	opts->exec_func = exec_name;
   
   comp_regex(rep);
@@ -89,7 +86,7 @@ main(int argc, char *argv[])
   exit(0);
 }
 
-void
+static void
 cleanup(int sig)
 {
   fprintf(stderr, "\nUser interrupted, cleaning up...\n");
