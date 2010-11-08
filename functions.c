@@ -27,7 +27,7 @@
 #include "search.h"
 
 void lookup_option(int, char **);
-int tell_type(char *);
+static int tell_type(char *);
 void comp_regex(reg_t *);
 int exec_regex(char *, reg_t *);
 int exec_name(char *, reg_t *);
@@ -68,11 +68,11 @@ lookup_option(int argc, char *argv[])
 	  opts->exec_func = exec_regex;
 	  break;
 	case 0:
-	  if (1 == opt_empty) {
+	  if (opt_empty) {
 		opts->find_empty = 1;
 	  }
 
-	  if (1 == opt_delete) {
+	  if (opt_delete) {
 		opts->delete = 1;
 	  }
 	  break;
@@ -292,7 +292,7 @@ walk_through(char *n_name, char *d_name)
 
 	found = 1;
 
-	if (1 == opts->delete) {
+	if (opts->delete) {
 	  
 	  if (NT_ISDIR != node_stat->type) {
 
@@ -309,7 +309,7 @@ walk_through(char *n_name, char *d_name)
 	}
 	  
 	
-	if (1 == opts->find_empty) {
+	if (opts->find_empty) {
 	  
 	  if (0 == node_stat->size &&
 		  NT_ISDIR != node_stat->type)
@@ -348,9 +348,9 @@ walk_through(char *n_name, char *d_name)
 	  }
 	}
 
-	if (1 == found) {
+	if (found) {
 	  
-	  if (1 == opts->find_empty &&
+	  if (opts->find_empty &&
 		  NT_ISDIR == node_stat->type &&
 		  2 >= ndir) {
 		(void)fprintf(stdout, "%s\n", p_buf);
