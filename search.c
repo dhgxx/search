@@ -45,9 +45,8 @@ main(int argc, char *argv[])
   rep = malloc(sizeof(reg_t));
   opts = malloc(sizeof(options_t));
   node_stat = malloc(sizeof(node_stat_t));
-  stree = bst_init();
   
-  if (!rep || !opts || !node_stat || !stree) {
+  if (!rep || !opts || !node_stat) {
 	(void)fprintf(stderr, "malloc(3): %s.\n", strerror(errno));
 	exit(0);
   }
@@ -72,7 +71,13 @@ main(int argc, char *argv[])
   
   if (argc == 0)
 	display_usage();
-  
+
+  if (opts->sort)
+	if (!(stree = bst_init())) {
+	  (void)fprintf(stderr, "%s: malloc(3): %s.\n", opts->prog_name, strerror(errno));
+	  exit(0);
+	}
+	
   if (!opts->exec_func)
 	opts->exec_func = exec_name;
   
@@ -82,12 +87,14 @@ main(int argc, char *argv[])
 	walk_through(argv[i], argv[i]);
   }
 
-  bst_proc(stree, BST_INORDER, _echo);
+  if (opts->sort) {
+	bst_proc(stree, BST_INORDER, _echo);
+	bst_free(stree);
+  }
   
   free_regex(rep);
   free(opts);
   free(node_stat);
-  bst_free(stree);
   
   exit(0);
 }
