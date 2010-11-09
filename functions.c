@@ -375,7 +375,7 @@ walk_through(char *n_name, char *d_name)
 void
 display_usage(void)
 {
-  static const char *s_help="usage: %s [-E|-I|-L|-P|-h|-v] [path] [-n|-r ...] [-t ...] [--empty]\n";
+  static const char *s_help="usage: %s [-E|-I|-L|-P|-s|-h|-v] [path] [-n|-r ...] [-t ...] [--empty]\n";
   static const char *l_help="\npossible options:\n\n \
 short options:\n\n \
 -h:\tthis long help.\n\n \
@@ -412,8 +412,10 @@ short options:\n\n \
 \t\t`s': socket\n";
 
   static const char *l_opts="long options:\n\n \
---empty:\tfind empty files or directories.\n\n";
-  
+--empty:\tfind empty files or directories.\n\n \
+--name:\tsame as `-n'.\n\n \
+--regex:\tsame as `-r'.\n\n";
+
   (void)fprintf(stderr, s_help, opts->prog_name);
   
   if (opts->long_help) {
