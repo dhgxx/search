@@ -380,6 +380,8 @@ display_usage(void)
 short options:\n\n \
 -h:\tthis long help.\n\n \
 -v:\tshow version number\n\n \
+-s:\tcause `search' to alphabetically sort the search results.\n \
+\tNote: `search -s' has identical output as `search | sort'.\n\n \
 -E:\tuse modern regular expressions rather than `basic' (obsolete)\n \
 \tregular expressions which is the default. See the man page of\n \
 \t`re_format(7)' for more information.\n\n \
