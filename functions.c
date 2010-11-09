@@ -50,12 +50,13 @@ lookup_option(int argc, char *argv[])
 	{ "type",    required_argument, NULL,       't' },
 	{ "empty",   no_argument,       &opt_empty,  1  },
 	{ "delete",  no_argument,       &opt_delete, 1  },
+	{ "sort",    no_argument,       NULL,       's' },
 	{ "help",    no_argument,       NULL,       'h' },
 	{ "version", no_argument,       NULL,       'v' },
 	{ NULL,      0,                 NULL,        0  }
   };
 
-  while ((ch = getopt_long(argc, argv, "EILPhvn:r:t:", longopts, NULL)) != -1)
+  while ((ch = getopt_long(argc, argv, "EILPshvn:r:t:", longopts, NULL)) != -1)
 	switch (ch) {
 	case 'n':
 	  bzero(rep->re_str, LINE_MAX);
@@ -68,13 +69,13 @@ lookup_option(int argc, char *argv[])
 	  opts->exec_func = exec_regex;
 	  break;
 	case 0:
-	  if (opt_empty) {
+	  if (opt_empty)
 		opts->find_empty = 1;
-	  }
-
-	  if (opt_delete) {
+	  if (opt_delete)
 		opts->delete = 1;
-	  }
+	  break;
+	case 's':
+	  opts->sort = 1;
 	  break;
 	case 'v':
 	  display_version();
@@ -312,11 +313,17 @@ walk_through(char *n_name, char *d_name)
 	if (opts->find_empty) {
 	  
 	  if (0 == node_stat->size &&
-		  NT_ISDIR != node_stat->type)
-		(void)fprintf(stdout, "%s\n", p_buf);
-
+		  NT_ISDIR != node_stat->type) {
+		if (!opts->sort)
+		  (void)fprintf(stdout, "%s\n", p_buf);
+		else
+		  bst_ins(p_buf, stree);
+	  }
 	} else {
-	  (void)fprintf(stdout, "%s\n", p_buf);
+	  if (!opts->sort)
+		(void)fprintf(stdout, "%s\n", p_buf);
+	  else
+		bst_ins(p_buf, stree);
 	}
   }
   
@@ -353,7 +360,10 @@ walk_through(char *n_name, char *d_name)
 	  if (opts->find_empty &&
 		  NT_ISDIR == node_stat->type &&
 		  2 >= ndir) {
-		(void)fprintf(stdout, "%s\n", p_buf);
+		if (!opts->sort)
+		  (void)fprintf(stdout, "%s\n", p_buf);
+		else
+		  bst_ins(p_buf, stree);
 	  }
 	}
 

@@ -28,6 +28,7 @@
 #include "extern.h"
 
 static void cleanup(int);
+static void _echo(const char *);
 
 int
 main(int argc, char *argv[])
@@ -44,8 +45,9 @@ main(int argc, char *argv[])
   rep = malloc(sizeof(reg_t));
   opts = malloc(sizeof(options_t));
   node_stat = malloc(sizeof(node_stat_t));
+  stree = bst_init();
   
-  if (!rep || !opts || !node_stat) {
+  if (!rep || !opts || !node_stat || !stree) {
 	(void)fprintf(stderr, "malloc(3): %s.\n", strerror(errno));
 	exit(0);
   }
@@ -58,6 +60,7 @@ main(int argc, char *argv[])
   opts->exec_func = NULL;
   opts->find_empty = 0;
   opts->delete = 0;
+  opts->sort = 0;
   
   bzero(rep->re_str, LINE_MAX);
   rep->re_cflag =  REG_BASIC;
@@ -78,10 +81,13 @@ main(int argc, char *argv[])
   for (i = 0; i < argc; i++) {
 	walk_through(argv[i], argv[i]);
   }
+
+  bst_proc(stree, BST_INORDER, _echo);
   
   free_regex(rep);
   free(opts);
   free(node_stat);
+  bst_free(stree);
   
   exit(0);
 }
@@ -99,8 +105,18 @@ cleanup(int sig)
   
   if (node_stat)
 	free(node_stat);
+
+  if (stree)
+	bst_free(stree);
   
   if (sig)
 	exit(1);
 
+}
+
+static void
+_echo(const char *s)
+{
+  if (s)
+	(void)fprintf(stdout, "%s\n", s);
 }

@@ -8,9 +8,11 @@ BINOWN=${LOGNAME}
 BINMODE=0755
 NO_MAN=true
 STRIP=-s
+OPT_CFLAGS=-I/opt/local/include
+OPT_LDFLAGS=-L/opt/local/lib -lmi
 
 .if !defined(.OBJDIR)
-.OBJDIR=.
+.OBJDIR=${.CURDIR}
 .endif
 
 .if !defined(OSNAME)
@@ -28,8 +30,16 @@ CFLAGS+=-D__DEBUG__
 
 .if defined(CFLAGS)
 CFLAGS+=-D_${OSNAME}_
+CFLAGS+=${OPT_CFLAGS}
 .else
 CFLAGS=-O2 -pipe -D_${OSNAME}_
+CFLAGS+=${OPT_CLFAGS}
+.endif
+
+.if defined(LDFLAGS)
+LDFLAGS+=${OPT_LDFLAGS}
+.else
+LDFLAGS=${OPT_LDFLAGS}
 .endif
 
 .if !defined(NOMAN)

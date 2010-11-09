@@ -43,6 +43,8 @@
 #include <signal.h>
 #include <fnmatch.h>
 #include <locale.h>
+#include <bstree.h>
+#include <stack.h>
 
 #define SEARCH_NAME "search"
 #define SEARCH_VERSION "0.3"
@@ -75,6 +77,7 @@ typedef struct _options_t {
   int re_icase;
   int find_empty;
   int delete;
+  int sort;
   int long_help;
   int (*stat_func)(const char *, struct stat *);
   int (*exec_func)(char *, reg_t *);
@@ -88,5 +91,6 @@ typedef struct _node_stat_t {
 reg_t *rep;
 options_t *opts;
 node_stat_t *node_stat;
+BSTREE *stree;
 
 #endif	/* _SEARCH_H_ */
