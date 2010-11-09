@@ -7,13 +7,10 @@ BINDIR=${HOME}/bin
 BINOWN=${LOGNAME}
 BINMODE=0755
 NO_MAN=true
+NO_OBJ=true
 STRIP=-s
 OPT_CFLAGS=-I/opt/local/include
 OPT_LDFLAGS=-L/opt/local/lib -lmi
-
-.if !defined(.OBJDIR)
-.OBJDIR=${.CURDIR}
-.endif
 
 .if !defined(OSNAME)
 .if defined(OSTYPE)
