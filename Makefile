@@ -33,7 +33,7 @@ CFLAGS+=-D_${OSNAME}_
 CFLAGS+=${OPT_CFLAGS}
 .else
 CFLAGS=-O2 -pipe -D_${OSNAME}_
-CFLAGS+=${OPT_CLFAGS}
+CFLAGS+=${OPT_CFLAGS}
 .endif
 
 .if defined(LDFLAGS)
