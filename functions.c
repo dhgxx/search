@@ -317,13 +317,13 @@ walk_through(char *n_name, char *d_name)
 		if (!opts->sort)
 		  (void)fprintf(stdout, "%s\n", p_buf);
 		else
-		  bst_ins(p_buf, stree);
+		  bst_ins(p_buf, stree, 0);
 	  }
 	} else {
 	  if (!opts->sort)
 		(void)fprintf(stdout, "%s\n", p_buf);
 	  else
-		bst_ins(p_buf, stree);
+		bst_ins(p_buf, stree, 0);
 	}
   }
   
@@ -363,7 +363,7 @@ walk_through(char *n_name, char *d_name)
 		if (!opts->sort)
 		  (void)fprintf(stdout, "%s\n", p_buf);
 		else
-		  bst_ins(p_buf, stree);
+		  bst_ins(p_buf, stree, 0);
 	  }
 	}
 

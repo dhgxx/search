@@ -75,10 +75,10 @@ typedef struct _options_t {
   const char *prog_version;
   node_t n_type;
   int re_icase;
-  int find_empty;
-  int delete;
-  int sort;
-  int long_help;
+  unsigned int find_empty;
+  unsigned int delete;
+  unsigned int sort;
+  unsigned int long_help;
   int (*stat_func)(const char *, struct stat *);
   int (*exec_func)(char *, reg_t *);
 } options_t;
