@@ -1,15 +1,15 @@
 # BSD makefile for project 'search'
 
 .if defined(OSTYPE)
-OSNAME= 	    ${OSTYPE}
+OSNAME=			${OSTYPE}
 .else
-OSNAME!=    	uname -s
+OSNAME!=		uname -s
 .endif
 
-INSTALL_USER!=	id -n -u
-OPT_DESTDIR=	/opt/local
+INSTALL_USER!=		id -n -u
+OPT_DESTDIR=		/opt/local
 
-CC=				cc
+CC=			cc
 OPT_INC=		-I/opt/local/include
 OPT_LIB=		-L/opt/local/lib -lmi
 
