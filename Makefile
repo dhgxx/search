@@ -1,23 +1,29 @@
 # BSD makefile for project 'search'
 
-PROG=search
-SRCS=search.c functions.c
-
-BINDIR=${HOME}/bin
-BINOWN=${LOGNAME}
-BINMODE=0755
-NO_MAN=true
-NO_OBJ=true
-STRIP=-s
-OPT_CFLAGS=-I/opt/local/include
-OPT_LDFLAGS=-L/opt/local/lib -lmi
-
-.if !defined(OSNAME)
 .if defined(OSTYPE)
 OSNAME=${OSTYPE}
 .else
-OSNAME=`uname -s`
+OSNAME!=uname -s
 .endif
+
+PROG=search
+SRCS=search.c functions.c
+MAN=search.1
+
+DESTDIR=/opt/local
+BINDIR=/bin
+MANDIR=/man/man
+
+BINOWN=root
+BINGRP=wheel
+BINMODE=0755
+NO_OBJ=true
+STRIP=-s
+OPT_CFLAGS=-I${DESTDIR}/include
+OPT_LDFLAGS=-L${DESTDIR}/lib -lmi
+
+.if ${OSNAME} == "OpenBSD"
+BINGRP=bin
 .endif
 
 .if defined(DEBUG)
@@ -39,14 +45,7 @@ LDFLAGS+=${OPT_LDFLAGS}
 LDFLAGS=${OPT_LDFLAGS}
 .endif
 
-.if !defined(NOMAN)
-NOMAN=${NO_MAN}
-.endif
-
-.if defined(GROUP)
-BINGRP=${GROUP}
-.else
-BINGRP=`id -g`
-.endif
+user-install:
+	${INSTALL} -o `id -u` -g `id -g` -m ${BINMODE} ${.CURDIR}/${PROG} ${HOME}${BINDIR}/${PROG}
 
 .include <bsd.prog.mk>

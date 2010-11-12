@@ -1,0 +1,90 @@
+.TH SEARCH "1" "November 2010" "search 0.3" "XBSD User Commands"
+.SH NAME
+\fBsearch\fR \-\- walk through a file hierachy
+.SH SYNOPSIS
+\fBsearch\fR [\-EILPshv] [path] [\-n|\-r ...] [\-t ...] [\-\-empty]
+.SH DESCRIPTION
+.PP
+\fBsearch\fR will walk through a file hierachy.
+.PP
+short options:
+.TP
+\fB\-h\fR:
+this long help.
+.TP
+\fB\-v\fR:
+show version number
+.TP
+\fB\-s\fR:
+cause `search' to alphabetically sort the search results.
+Note: `search \fB\-s\fR' has identical output as `search | sort'.
+.TP
+\fB\-E\fR:
+use modern regular expressions rather than `basic' (obsolete)
+regular expressions which is the default. See the man page of
+`re_format(7)' for more information.
+.TP
+\fB\-I\fR:
+case insensitive search, otherwise the specified pattern is
+interpreted as case sensitive.
+.TP
+\fB\-P\fR:
+do not follow symbolic links, but return the information the
+symbolic links themselves, this is the default behaviour.
+.TP
+\fB\-L\fR:
+follow symbolic links and return the information of the files
+they reference. It is an error if the referenced files do not
+exist.
+.TP
+\fB\-n\fR:
+specify a pattern to match the search results. Special shell
+pattern matching characters may be used as part of the pattern.
+Also available as `\-\-name'. See the man page of `fnmatch(3)' for
+more information.
+.TP
+\fB\-r\fR:
+specify a regular expression to match the search results. Unless
+the option `\-E' is explicitly specified, the regular expression
+will only be interpreted as `basic' (obsolete) regular expressions.
+Also available as `\-\-regex'. See the man page of `re_format(7)' for
+more information.
+.TP
+\fB\-t\fR:
+specify a file type to match the search results. Also available
+as `\-\-type'. The possible file types:
+.RS
+.TP
+`\fBb\fR': block device
+.TP
+`\fBc\fR': character special
+.TP
+`\fBd\fR': directory
+.TP
+`\fBf\fR': fifo
+.TP
+`\fBl\fR': symbolic link
+.TP
+`\fBr\fR': regular file
+.TP
+`\fBs\fR': socket
+.TP
+`\fBw\fR': white out (\fBOpenBSD\fR doesn't have this)
+.RE
+.PP
+long options:
+.TP
+\fB\-\-empty\fR:
+find empty files or directories.
+.TP
+\fB\-\-name\fR:
+same as `\-n'.
+.TP
+\fB\-\-regex\fR:
+same as `\-r'.
+.SH HISTORY
+A \fBsearch\fR command was written mainly for programming practice.
+.SH AUTHOR
+\fBDenise H. G.\fR <darcsis AT gmail DOT com>
+.SH BUGS
+There must be some of them...
