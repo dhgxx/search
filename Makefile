@@ -12,12 +12,17 @@ OPT_DESTDIR=	/opt/local
 CC=				cc
 OPT_INC=		-I/opt/local/include
 OPT_LIB=		-L/opt/local/lib -lmi
-CFLAGS=			-O2 -pipe -D_${OSNAME}_
 
 PROG=			search
 MAN=			${PROG}.1
 SRCS=			functions.c search.c
 OBJS=			functions.o search.o
+
+.if defined(CFLAGS)
+MYCFLAGS=		${CFLAGS} -D_${OSNAME}_
+.else
+MYCFLAGS=		-O2 -pipe -D_{OSNAME}_
+.endif
 
 .if ${OSNAME} == "FreeBSD"
 BINGRP=			wheel
@@ -43,11 +48,11 @@ install: ${INST_TYPE}
 
 ${OBJS}:
 .for i in ${SRCS}
-	${CC} ${CFLAGS} ${OPT_INC} -c $i
+	${CC} ${MYCFLAGS} ${OPT_INC} -c $i
 .endfor
 
 ${PROG}:
-	${CC} ${CFLAGS} ${OPT_LIB} -o ${PROG} ${OBJS}
+	${CC} ${MYCFLAGS} ${OPT_LIB} -o ${PROG} ${OBJS}
 
 makeman:
 .if ${OSNAME} == "OpenBSD"
@@ -64,5 +69,5 @@ user-install:
 	${INSTALL} -o `id -u` -g `id -g` -m 0755 ${PROG} ${HOME}/bin
 
 clean:
-	rm -f *.o *.cat* *.gz
+	rm -f ${PROG} *.o *.cat* *.gz
 
