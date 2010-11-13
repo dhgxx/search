@@ -1,90 +1,106 @@
-.TH SEARCH "1" "November 2010" "search 0.3" "XBSD User Commands"
-.SH NAME
-\fBsearch\fR \-\- walk through a file hierachy
-.SH SYNOPSIS
-\fBsearch\fR [\-EILPshv] [path] [\-n|\-r ...] [\-t ...] [\-\-empty]
-.SH DESCRIPTION
-.PP
-\fBsearch\fR will walk through a file hierachy.
-.PP
-short options:
-.TP
-\fB\-h\fR:
+.Dd November 12, 2010
+.Dt SEARCH 1
+.Os
+.Sh NAME
+.Nm search
+.Nd walk through a file hierarchy
+.Sh SYNOPSIS
+.Nm
+.Op Fl EHILPshv
+.Ar path ...
+.Op Fl \-empty Ar ...
+.Op Fl \-type Ar ...
+.Op Fl \-regex Ar ...
+.Sh DESCRIPTION
+The
+.Nm
+will walk through a file hierachy.
+.Pp
+Short options:
+.Bl -tag -width indent
+.It Fl h
 this long help.
-.TP
-\fB\-v\fR:
+.It Fl v
 show version number
-.TP
-\fB\-s\fR:
-cause `search' to alphabetically sort the search results.
-Note: `search \fB\-s\fR' has identical output as `search | sort'.
-.TP
-\fB\-E\fR:
+.It Fl s
+cause
+.Nm
+to alphabetically sort the search results.
+Note: search
+.Ic -s
+has identical output as `search | sort'.
+.It Fl E
 use modern regular expressions rather than `basic' (obsolete)
 regular expressions which is the default. See the man page of
-`re_format(7)' for more information.
-.TP
-\fB\-I\fR:
+.Xr re_format 7
+for more information.
+.It Fl I
 case insensitive search, otherwise the specified pattern is
 interpreted as case sensitive.
-.TP
-\fB\-P\fR:
+.It Fl P
 do not follow symbolic links, but return the information the
 symbolic links themselves, this is the default behaviour.
-.TP
-\fB\-L\fR:
+.It Fl L
 follow symbolic links and return the information of the files
 they reference. It is an error if the referenced files do not
 exist.
-.TP
-\fB\-n\fR:
-specify a pattern to match the search results. Special shell
-pattern matching characters may be used as part of the pattern.
-Also available as `\-\-name'. See the man page of `fnmatch(3)' for
-more information.
-.TP
-\fB\-r\fR:
-specify a regular expression to match the search results. Unless
-the option `\-E' is explicitly specified, the regular expression
-will only be interpreted as `basic' (obsolete) regular expressions.
-Also available as `\-\-regex'. See the man page of `re_format(7)' for
-more information.
-.TP
-\fB\-t\fR:
-specify a file type to match the search results. Also available
-as `\-\-type'. The possible file types:
-.RS
-.TP
-`\fBb\fR': block device
-.TP
-`\fBc\fR': character special
-.TP
-`\fBd\fR': directory
-.TP
-`\fBf\fR': fifo
-.TP
-`\fBl\fR': symbolic link
-.TP
-`\fBr\fR': regular file
-.TP
-`\fBs\fR': socket
-.TP
-`\fBw\fR': white out (\fBOpenBSD\fR doesn't have this)
-.RE
-.PP
-long options:
-.TP
-\fB\-\-empty\fR:
+.It Fl n Ar pattern
+specify a
+.Ar pattern
+to match the search results. Special shell pattern matching
+characters may be used as part of the pattern. See the man
+page of
+.Xr fnmatch 3
+for more information.
+.It Fl r Ar regexp
+specify a regular expression
+.Ar regexp
+to match the search results. Unless the option
+.Ic -E
+is explicitly specified, the regular expression will only be
+interpreted as `basic' (obsolete) regular expressions. See the
+man page of
+.Xr re_format 7
+for more information.
+.It Fl t Ar type
+specify a file type
+.Ar type
+to match the search results.
+.Pp
+.Bl -tag -width indent -compact
+.It Cm b
+block device
+.It Cm c
+character special
+.It Cm d
+directory
+.It Cm f
+fifo
+.It Cm l
+symbolic link
+.It Cm r
+regular file
+.It Cm s
+socket
+.It Cm w
+white out (OpenBSD doesn't have this)
+.El
+.El
+.Pp
+Long options:
+.Bl -tag -width indent
+.It Fl -empty
 find empty files or directories.
-.TP
-\fB\-\-name\fR:
-same as `\-n'.
-.TP
-\fB\-\-regex\fR:
-same as `\-r'.
-.SH HISTORY
+.It Fl -name Ar pattern
+same as
+.Ic -n .
+.It Fl -regex Ar regexp
+same as
+.Ic -r .
+.El
+.Sh HISTORY
 A \fBsearch\fR command was written mainly for programming practice.
-.SH AUTHOR
+.Sh AUTHOR
 \fBDenise H. G.\fR <darcsis AT gmail DOT com>
-.SH BUGS
+.Sh BUGS
 There must be some of them...
