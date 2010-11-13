@@ -8,11 +8,14 @@ OSNAME!=		uname -s
 
 INSTALL_USER!=		id -n -u
 OPT_DESTDIR=		/opt/local
+OPT_BINDIR=		${OPT_DESTDIR}/bin
+OPT_INCDIR=		${OPT_DESTDIR}/include
 OPT_LIBDIR=		${OPT_DESTDIR}/lib
+OPT_MANDIR=		${OPT_DESTDIR}/man
 
 CC=			cc
-OPT_INC=		-I/opt/local/include
-OPT_LIB=		-L/opt/local/lib -lmi
+OPT_INC=		-I${OPT_INCDIR}
+OPT_LIB=		-L${OPT_LIBDIR} -lmi
 
 PROG=			search
 MAN=			${PROG}.1
@@ -29,13 +32,11 @@ MYCFLAGS=		-O2 -pipe -D_{OSNAME}_
 .if ${OSNAME} == "FreeBSD"
 BINGRP=			wheel
 MFILE=			${MAN}.gz
-BINDIR=			${OPT_DESTDIR}/bin
-MANDIR=			${OPT_DESTDIR}/man/man1
+MANDIR=			${OPT_MANDIR}/man1
 .elif ${OSNAME} == "OpenBSD"
 BINGRP=			bin
 MFILE=			${MAN:S/.1$/.cat0/g}
-BINDIR=			${OPT_DESTDIR}/bin
-MANDIR=			${OPT_DESTDIR}/man/cat1
+MANDIR=			${OPT_MANDIR}/cat1
 .endif
 
 .if ${INSTALL_USER} == "root"
@@ -64,9 +65,10 @@ makeman:
 .endif
 
 sys-install:
-	${INSTALL} -o root -g ${BINGRP} -m 0755 ${PROG} ${BINDIR}
+	${INSTALL} -o root -g ${BINGRP} -m 0755 ${PROG} ${OPT_BINDIR}
 	${INSTALL} -o root -g ${BINGRP} -m 0444 ${MFILE} ${MANDIR}
 	ldconfig -m ${OPT_LIBDIR}
+	makewhatis ${OPT_MANDIR}
 
 user-install:
 	${INSTALL} -o `id -u` -g `id -g` -m 0755 ${PROG} ${HOME}/bin
