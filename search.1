@@ -5,13 +5,30 @@
 .Nm search
 .Nd walk through a file hierarchy
 .Sh SYNOPSIS
+.Pp
 .Nm
-.Op Fl EILPsv
+.Op Fl L | Fl P
+.Op Fl EIsv
+.Op Fl f Ar path | Fl -path Ar path
 .Ar path ...
 .Op Fl n Ar pattern | Fl -name Ar pattern
 .Op Fl r Ar regexp | Fl -regex Ar regexp
 .Op Fl t Ar ftype | Fl -type Ar ftype
 .Op Fl -empty
+.Op Fl -sort
+.Pp
+.Nm
+.Op Fl L | Fl P
+.Op Fl EIsv
+.Fl f Ar path
+|
+.Fl -path Ar path
+.Op path ...
+.Op Fl n Ar pattern | Fl -name Ar pattern
+.Op Fl r Ar regexp | Fl -regex Ar regexp
+.Op Fl t Ar ftype | Fl -type Ar ftype
+.Op Fl -empty
+.Op Fl -sort
 .Sh DESCRIPTION
 The
 .Nm
@@ -43,6 +60,8 @@ has identical output as
 .Ql search | sort .
 .It Fl v
 show version number
+.It Fl h
+this long help.
 .It Fl n Ar pattern
 specify a
 .Ar pattern
@@ -91,15 +110,21 @@ Long options:
 .Bl -tag -width indent
 .It Fl -empty
 find empty files or directories.
+.It Fl -sort
+same as
+.Ic -s .
 .It Fl -name Ar pattern
 same as
-.Ic -n .
+.Ic -n Ar pattern .
+.It Fl -path Ar path
+same as
+.Ic -f Ar path .
 .It Fl -regex Ar regexp
 same as
-.Ic -r .
+.Ic -r Ar regexp .
 .It Fl -type Ar ftype
 same as
-.Ic -t .
+.Ic -t Ar ftype .
 .El
 .Sh NOTES
 As

@@ -73,8 +73,10 @@ typedef struct _reg_t {
 typedef struct _options_t {
   const char *prog_name;
   const char *prog_version;
+  char path[MAXPATHLEN];
   node_t n_type;
   int re_icase;
+  unsigned int find_path;
   unsigned int find_empty;
   unsigned int delete;
   unsigned int sort;

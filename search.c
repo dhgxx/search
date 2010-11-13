@@ -56,10 +56,12 @@ main(int argc, char *argv[])
   opts->n_type = 0;
   opts->stat_func = lstat;
   opts->exec_func = NULL;
+  opts->find_path = 0;
   opts->find_empty = 0;
   opts->delete = 0;
   opts->sort = 0;
-  
+
+  bzero(opts->path, MAXPATHLEN);
   bzero(rep->re_str, LINE_MAX);
   rep->re_cflag =  REG_BASIC;
   
@@ -68,7 +70,8 @@ main(int argc, char *argv[])
   argc -= optind;
   argv += optind;
   
-  if (argc == 0)
+  if (argc == 0 &&
+	  opts->find_path == 0)
 	display_usage();
 
   if (opts->sort) {
@@ -82,9 +85,13 @@ main(int argc, char *argv[])
 	opts->exec_func = exec_name;
   
   comp_regex(rep);
-  
-  for (i = 0; i < argc; i++) {
-	walk_through(argv[i], argv[i]);
+
+  if (opts->find_path)
+	walk_through(opts->path, opts->path);
+
+  if (argc > 0) {
+	for (i = 0; i < argc && argv[i]; i++)
+	  walk_through(argv[i], argv[i]);
   }
 
   if (opts->sort && stree) {
