@@ -45,6 +45,7 @@ lookup_option(int argc, char *argv[])
   int ch;
   
   static struct option longopts[] = {
+	{ "path",    required_argument, NULL,       'f' },
 	{ "name",    required_argument, NULL,       'n' },
 	{ "regex",   required_argument, NULL,       'r' },
 	{ "type",    required_argument, NULL,       't' },
@@ -55,16 +56,21 @@ lookup_option(int argc, char *argv[])
 	{ NULL,      0,                 NULL,        0  }
   };
 
-  while ((ch = getopt_long(argc, argv, "EILPsvn:r:t:", longopts, NULL)) != -1)
+  while ((ch = getopt_long(argc, argv, "EILPsvf:n:r:t:", longopts, NULL)) != -1)
 	switch (ch) {
+	case 'f':
+	  opts->find_path = 1;
+	  bzero(opts->path, MAXPATHLEN);
+	  strncpy(opts->path, optarg, MAXPATHLEN);
+	  break;
 	case 'n':
 	  bzero(rep->re_str, LINE_MAX);
-	  strlcat(rep->re_str, optarg, LINE_MAX);
+	  strncpy(rep->re_str, optarg, LINE_MAX);
 	  opts->exec_func = exec_name;
 	  break;
 	case 'r':
 	  bzero(rep->re_str, LINE_MAX);
-	  strlcat(rep->re_str, optarg, LINE_MAX);
+	  strncpy(rep->re_str, optarg, LINE_MAX);
 	  opts->exec_func = exec_regex;
 	  break;
 	case 0:
@@ -281,7 +287,7 @@ walk_through(char *n_name, char *d_name)
 
   found = 0;
   bzero(p_buf, MAXPATHLEN);
-  strlcat(p_buf, n_name, LINE_MAX);
+  strncpy(p_buf, n_name, MAXPATHLEN);
   
   if (opts->exec_func(d_name, rep) &&
 	  (NT_UNKNOWN == opts->n_type ||
@@ -341,12 +347,12 @@ walk_through(char *n_name, char *d_name)
 	  if (strncmp(dir->d_name, ".", 2) != 0 &&
 		  strncmp(dir->d_name, "..", 3) != 0) {
 		bzero(tmp_buf, MAXPATHLEN);
-		strlcat(tmp_buf, p_buf, LINE_MAX);
+		strncat(tmp_buf, p_buf, MAXPATHLEN);
 		
 		if (p_buf[strlen(p_buf) - 1] != '/')
-		  strlcat(tmp_buf, "/", MAXPATHLEN);
+		  strncat(tmp_buf, "/", MAXPATHLEN);
 		
-		strlcat(tmp_buf, dir->d_name, LINE_MAX);
+		strncat(tmp_buf, dir->d_name, MAXPATHLEN);
 		walk_through(tmp_buf, dir->d_name);
 	  }
 	}
