@@ -28,7 +28,7 @@
 #include "extern.h"
 
 static void cleanup(int);
-static void _echo(const char *);
+static void _echo(const bst_node *);
 
 int
 main(int argc, char *argv[])
@@ -129,8 +129,8 @@ cleanup(int sig)
 }
 
 static void
-_echo(const char *str)
+_echo(const bst_node *np)
 {
-  if (str)
-	(void)fprintf(stdout, "%s\n", str);
+  if (np)
+	(void)fprintf(stdout, "%s\n", np->node);
 }
