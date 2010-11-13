@@ -69,7 +69,7 @@ makeman:
 
 sys-install:
 	${INSTALL} -o root -g ${BINGRP} -m 0755 ${PROG} ${OPT_BINDIR}
-	${INSTALL} -o root -g ${BINGRP} -m 0444 ${MFILE} ${MANDIR}
+	${INSTALL} -o root -g ${BINGRP} -m 0444 ${MFILE} ${MANDIR}/${MFILE:S/.cat0$/.0/g}
 	${LDCONFIG} -m ${OPT_LIBDIR}
 	${MKWHATIS} ${OPT_MANDIR}
 
