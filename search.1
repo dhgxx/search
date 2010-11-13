@@ -59,8 +59,9 @@ specify a regular expression
 to match the search results. Unless the option
 .Ic -E
 is explicitly specified, the regular expression will only be
-interpreted as `basic' (obsolete) regular expressions. See the
-man page of
+interpreted as
+.Ql basic
+(obsolete) regular expressions. See the man page of
 .Xr re_format 7
 for more information.
 .It Fl t Ar ftype
@@ -102,6 +103,15 @@ same as
 same as
 .Ic -t .
 .El
+.Sh NOTES
+As
+.Nm
+is just a programming practice work. Now it uses a binary search tree
+to sort the search results, which is rather time-cosuming for a large
+file hierachy. For instance, if you exectue
+.Ql search -s / ,
+just get a cup of coffe and read some news before the output should
+pop out.
 .Sh HISTORY
 A
 .Nm
