@@ -103,7 +103,6 @@ static void
 cleanup(int sig)
 {
   fprintf(stderr, "\nUser interrupted, cleaning up...\n");
-
   
   if (opts->sort && stree)
 	bst_free(stree);
