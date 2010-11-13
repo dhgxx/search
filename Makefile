@@ -8,6 +8,7 @@ OSNAME!=		uname -s
 
 INSTALL_USER!=		id -n -u
 OPT_DESTDIR=		/opt/local
+OPT_LIBDIR=		${OPT_DESTDIR}/lib
 
 CC=			cc
 OPT_INC=		-I/opt/local/include
@@ -65,6 +66,7 @@ makeman:
 sys-install:
 	${INSTALL} -o root -g ${BINGRP} -m 0755 ${PROG} ${BINDIR}
 	${INSTALL} -o root -g ${BINGRP} -m 0444 ${MFILE} ${MANDIR}
+	ldconfig -m ${OPT_LIBDIR}
 
 user-install:
 	${INSTALL} -o `id -u` -g `id -g` -m 0755 ${PROG} ${HOME}/bin
