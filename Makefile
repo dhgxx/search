@@ -34,6 +34,7 @@ MANDIR=			${OPT_DESTDIR}/man/man1
 BINGRP=			bin
 MFILE=			${MAN:S/.1$/.cat0/g}
 BINDIR=			${OPT_DESTDIR}/bin
+LIBDIR=			${OPT_DESTDIR}/lib
 MANDIR=			${OPT_DESTDIR}/man/cat1
 .endif
 
@@ -65,6 +66,7 @@ makeman:
 sys-install:
 	${INSTALL} -o root -g ${BINGRP} -m 0755 ${PROG} ${BINDIR}
 	${INSTALL} -o root -g ${BINGRP} -m 0444 ${MFILE} ${MANDIR}
+	ldconfig -m ${LIBDIR}
 
 user-install:
 	${INSTALL} -o `id -u` -g `id -g` -m 0755 ${PROG} ${HOME}/bin
