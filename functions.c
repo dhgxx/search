@@ -55,7 +55,7 @@ lookup_option(int argc, char *argv[])
 	{ NULL,      0,                 NULL,        0  }
   };
 
-  while ((ch = getopt_long(argc, argv, "EILPshvn:r:t:", longopts, NULL)) != -1)
+  while ((ch = getopt_long(argc, argv, "EILPsvn:r:t:", longopts, NULL)) != -1)
 	switch (ch) {
 	case 'n':
 	  bzero(rep->re_str, LINE_MAX);
