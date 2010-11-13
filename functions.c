@@ -51,7 +51,6 @@ lookup_option(int argc, char *argv[])
 	{ "empty",   no_argument,       &opt_empty,  1  },
 	{ "delete",  no_argument,       &opt_delete, 1  },
 	{ "sort",    no_argument,       NULL,       's' },
-	{ "help",    no_argument,       NULL,       'h' },
 	{ "version", no_argument,       NULL,       'v' },
 	{ NULL,      0,                 NULL,        0  }
   };
@@ -111,8 +110,8 @@ lookup_option(int argc, char *argv[])
 		opts->n_type = NT_ISREG;
 		break;
 	  default:
-		opts->long_help = 1;
 		display_usage();
+		break;
 	  }
 	  break;
 	case 'E':
@@ -125,9 +124,6 @@ lookup_option(int argc, char *argv[])
 	  opts->stat_func = stat;
 	  break;
 	case 'P':
-	  break;
-	case 'h':
-	  opts->long_help = 1;
 	  break;
 	default:
 	  display_usage();
@@ -375,57 +371,10 @@ walk_through(char *n_name, char *d_name)
 void
 display_usage(void)
 {
-  static const char *s_help="usage: %s [-E|-I|-L|-P|-s|-h|-v] [path] [-n|-r ...] [-t ...] [--empty]\n";
-  static const char *l_help="\npossible options:\n\n \
-short options:\n\n \
--h:\tthis long help.\n\n \
--v:\tshow version number\n\n \
--s:\tcause `search' to alphabetically sort the search results.\n \
-\tNote: `search -s' has identical output as `search | sort'.\n\n \
--E:\tuse modern regular expressions rather than `basic' (obsolete)\n \
-\tregular expressions which is the default. See the man page of\n \
-\t`re_format(7)' for more information.\n\n \
--I:\tcase insensitive search, otherwise the specified pattern is\n \
-\tinterpreted as case sensitive.\n\n \
--P:\tdo not follow symbolic links, but return the information the\n \
-\tsymbolic links themselves, this is the default behaviour.\n\n \
--L:\tfollow symbolic links and return the information of the files\n \
-\tthey reference. It is an error if the referenced files do not\n \
-\texist.\n\n \
--n:\tspecify a pattern to match the search results. Special shell\n \
-\tpattern matching characters may be used as part of the pattern.\n \
-\tAlso available as `--name'. See the man page of `fnmatch(3)' for\n \
-\tmore information.\n\n \
--r:\tspecify a regular expression to match the search results. Unless\n \
-\tthe option `-E' is explicitly specified, the regular expression\n \
-\twill only be interpreted as `basic' (obsolete) regular expressions.\n \
-\tAlso available as `--regex'. See the man page of `re_format(7)' for\n \
-\tmore information.\n\n \
--t:\tspecify a file type to match the search results. Also available\n \
-\tas `--type'. The possible types are as follows:\n\n \
-\t\t`b': block device\n \
-\t\t`c': character special\n \
-\t\t`d': directory\n \
-\t\t`f': fifo\n \
-\t\t`l': symbolic link\n \
-\t\t`r': regular file\n \
-\t\t`s': socket\n";
+  static const char *usage = "usage: %s [-EILPsv] ... [-n|--name ...] [-r|--regex ...] [-t|--type ...] [--empty]\n";
 
-  static const char *l_opts="long options:\n\n \
---empty:\tfind empty files or directories.\n\n \
---name:\tsame as `-n'.\n\n \
---regex:\tsame as `-r'.\n\n";
-
-  (void)fprintf(stderr, s_help, opts->prog_name);
+  (void)fprintf(stderr, usage, opts->prog_name);
   
-  if (opts->long_help) {
-	(void)fprintf(stderr, l_help);
-#ifndef _OpenBSD_
-	(void)fprintf(stderr, "\t\t`w': white out\n");
-#endif
-	(void)fprintf(stderr, l_opts);
-  }
-
   exit (0);
 }
 

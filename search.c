@@ -55,7 +55,6 @@ main(int argc, char *argv[])
   opts->prog_version = SEARCH_VERSION;
   opts->n_type = 0;
   opts->stat_func = lstat;
-  opts->long_help = 0;
   opts->exec_func = NULL;
   opts->find_empty = 0;
   opts->delete = 0;
