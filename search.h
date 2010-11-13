@@ -78,7 +78,6 @@ typedef struct _options_t {
   unsigned int find_empty;
   unsigned int delete;
   unsigned int sort;
-  unsigned int long_help;
   int (*stat_func)(const char *, struct stat *);
   int (*exec_func)(char *, reg_t *);
 } options_t;
