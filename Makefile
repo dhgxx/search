@@ -16,6 +16,7 @@ OPT_LIB=		-L/opt/local/lib -lmi
 PROG=			search
 MAN=			${PROG}.1
 SRCS=			functions.c search.c
+HDRS=			search.h
 OBJS=			functions.o search.o
 
 .if defined(CFLAGS)
@@ -46,7 +47,7 @@ all: ${OBJS} ${PROG} makeman
 
 install: ${INST_TYPE}
 
-${OBJS}:
+${OBJS}: ${SRCS} ${HDRS}
 .for i in ${SRCS}
 	${CC} ${MYCFLAGS} ${OPT_INC} -c $i
 .endfor
