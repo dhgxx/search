@@ -33,10 +33,12 @@ MYCFLAGS=		-O2 -pipe -D_{OSNAME}_
 BINGRP=			wheel
 MFILE=			${MAN}.gz
 MANDIR=			${OPT_MANDIR}/man1
+MKWHATIS=		/usr/bin/makewhatis
 .elif ${OSNAME} == "OpenBSD"
 BINGRP=			bin
 MFILE=			${MAN:S/.1$/.cat0/g}
 MANDIR=			${OPT_MANDIR}/cat1
+MKWHATIS=		/usr/libexec/makewhatis
 .endif
 
 .if ${INSTALL_USER} == "root"
@@ -68,7 +70,7 @@ sys-install:
 	${INSTALL} -o root -g ${BINGRP} -m 0755 ${PROG} ${OPT_BINDIR}
 	${INSTALL} -o root -g ${BINGRP} -m 0444 ${MFILE} ${MANDIR}
 	ldconfig -m ${OPT_LIBDIR}
-	makewhatis ${OPT_MANDIR}
+	${MKWHATIS} ${OPT_MANDIR}
 
 user-install:
 	${INSTALL} -o `id -u` -g `id -g` -m 0755 ${PROG} ${HOME}/bin
