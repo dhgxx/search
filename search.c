@@ -72,11 +72,12 @@ main(int argc, char *argv[])
   if (argc == 0)
 	display_usage();
 
-  if (opts->sort)
+  if (opts->sort) {
 	if (!(stree = bst_init())) {
 	  (void)fprintf(stderr, "%s: malloc(3): %s.\n", opts->prog_name, strerror(errno));
 	  exit(0);
 	}
+  }
 	
   if (!opts->exec_func)
 	opts->exec_func = exec_name;
@@ -87,7 +88,7 @@ main(int argc, char *argv[])
 	walk_through(argv[i], argv[i]);
   }
 
-  if (opts->sort) {
+  if (opts->sort && stree) {
 	bst_proc(stree, BST_INORDER, _echo);
 	bst_free(stree);
   }
@@ -103,7 +104,11 @@ static void
 cleanup(int sig)
 {
   fprintf(stderr, "\nUser interrupted, cleaning up...\n");
+
   
+  if (opts->sort && stree)
+	bst_free(stree);
+
   if (rep)
 	free_regex(rep);
   
@@ -112,9 +117,6 @@ cleanup(int sig)
   
   if (node_stat)
 	free(node_stat);
-
-  if (stree)
-	bst_free(stree);
   
   if (sig)
 	exit(1);
@@ -122,8 +124,8 @@ cleanup(int sig)
 }
 
 static void
-_echo(const char *s)
+_echo(const char *str)
 {
-  if (s)
-	(void)fprintf(stdout, "%s\n", s);
+  if (str)
+	(void)fprintf(stdout, "%s\n", str);
 }
