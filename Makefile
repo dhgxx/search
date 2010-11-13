@@ -14,6 +14,7 @@ OPT_LIBDIR=		${OPT_DESTDIR}/lib
 OPT_MANDIR=		${OPT_DESTDIR}/man
 
 CC=			cc
+LDCONFIG=		/sbin/ldconfig
 OPT_INC=		-I${OPT_INCDIR}
 OPT_LIB=		-L${OPT_LIBDIR} -lmi
 
@@ -69,7 +70,7 @@ makeman:
 sys-install:
 	${INSTALL} -o root -g ${BINGRP} -m 0755 ${PROG} ${OPT_BINDIR}
 	${INSTALL} -o root -g ${BINGRP} -m 0444 ${MFILE} ${MANDIR}
-	ldconfig -m ${OPT_LIBDIR}
+	${LDCONFIG} -m ${OPT_LIBDIR}
 	${MKWHATIS} ${OPT_MANDIR}
 
 user-install:
