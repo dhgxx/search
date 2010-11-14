@@ -183,7 +183,7 @@ exec_name(char *d_name, reg_t *rep)
 	flag = FNM_CASEFOLD | FNM_PERIOD | FNM_PATHNAME | FNM_NOESCAPE;
   }
   
-#ifdef __DEBUG__
+#ifdef _DEBUG_
   printf("pattern=%s, name=%s\n", pattern, d_name);
 #endif
   matched = fnmatch(pattern, d_name, flag);

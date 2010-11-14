@@ -29,6 +29,13 @@ MYCFLAGS=		${CFLAGS} -D_${OSNAME}_
 MYCFLAGS=		-O2 -pipe -D_{OSNAME}_
 .endif
 
+.if !defined(DEBUG)
+STRIP=			-s
+.else
+STRIP=
+MYCFLAGS+=		-ggdb -D_DEBUG_
+.endif
+
 .if ${OSNAME} == "FreeBSD"
 BINGRP=			wheel
 MFILE=			${MAN}.gz
@@ -67,7 +74,7 @@ makeman:
 .endif
 
 sys-install:
-	${INSTALL} -o root -g ${BINGRP} -m 0755 ${PROG} ${OPT_BINDIR}
+	${INSTALL} ${STRIP} -o root -g ${BINGRP} -m 0755 ${PROG} ${OPT_BINDIR}
 	${INSTALL} -o root -g ${BINGRP} -m 0444 ${MFILE} ${MANDIR}/${MFILE:S/.cat0$/.0/g}
 	${MKWHATIS} ${OPT_MANDIR}
 
