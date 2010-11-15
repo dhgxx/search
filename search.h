@@ -81,17 +81,16 @@ typedef struct _options_t {
   unsigned int delete;
   unsigned int sort;
   int (*stat_func)(const char *, struct stat *);
-  int (*exec_func)(char *, reg_t *);
+  int (*exec_func)(const char *, reg_t *);
 } options_t;
 
 typedef struct _node_stat_t {
   node_t type;
-  off_t size;
+  unsigned int empty;
 } node_stat_t;
 
 reg_t *rep;
 options_t *opts;
 node_stat_t *node_stat;
-BSTREE *stree;
 
 #endif	/* _SEARCH_H_ */

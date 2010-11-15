@@ -26,18 +26,23 @@
 
 #include "search.h"
 
-void lookup_option(int, char **);
-static int tell_type(char *);
-void comp_regex(reg_t *);
-int exec_regex(char *, reg_t *);
-int exec_name(char *, reg_t *);
-void free_regex(reg_t *);
-void walk_through(char *, char *);
-void display_usage(void);
-void display_version(void);
-
 static int opt_empty;
 static int opt_delete;
+static BSTREE *stree;
+
+static void _outprt(const bst_node *);
+static void _procnode(const bst_node *);
+static int _nstat(const char *);
+static int _found(const char *, const char *);
+
+void lookup_option(int, char **);
+void comp_regex(reg_t *);
+int exec_regex(const char *, reg_t *);
+int exec_name(const char *, reg_t *);
+void free_regex(reg_t *);
+void walk_through(const char *, const char *);
+void display_usage(void);
+void display_version(void);
 
 void
 lookup_option(int argc, char *argv[])
@@ -74,9 +79,9 @@ lookup_option(int argc, char *argv[])
 	  opts->exec_func = exec_regex;
 	  break;
 	case 0:
-	  if (opt_empty)
+	  if (opt_empty == 1)
 		opts->find_empty = 1;
-	  if (opt_delete)
+	  if (opt_delete == 1)
 		opts->delete = 1;
 	  break;
 	case 's':
@@ -138,33 +143,7 @@ lookup_option(int argc, char *argv[])
 }
 
 int
-tell_type(char *node_name)
-{
-  struct stat stbuf;
-  int tmp;
-  
-  tmp = opts->stat_func(node_name, &stbuf);
-  
-  if (tmp < 0 )
-	return NT_ERROR;
-
-  node_stat->size = stbuf.st_size;
-  
-  if (S_ISBLK(stbuf.st_mode)) node_stat->type = NT_ISBLK;
-  if (S_ISCHR(stbuf.st_mode)) node_stat->type = NT_ISCHR;
-  if (S_ISDIR(stbuf.st_mode)) node_stat->type = NT_ISDIR;
-  if (S_ISFIFO(stbuf.st_mode)) node_stat->type = NT_ISFIFO;
-  if (S_ISLNK(stbuf.st_mode)) node_stat->type = NT_ISLNK;
-  if (S_ISREG(stbuf.st_mode)) node_stat->type = NT_ISREG;
-  if (S_ISSOCK(stbuf.st_mode)) node_stat->type = NT_ISSOCK;
-#ifndef _OpenBSD_
-  if (S_ISWHT(stbuf.st_mode)) node_stat->type = NT_ISWHT;
-#endif
-  return NT_UNKNOWN;
-}
-
-int
-exec_name(char *d_name, reg_t *rep)
+exec_name(const char *d_name, reg_t *rep)
 {
   int flag, len, matched;
   char *pattern;
@@ -184,7 +163,10 @@ exec_name(char *d_name, reg_t *rep)
   }
   
 #ifdef __DEBUG__
-  printf("pattern=%s, name=%s\n", pattern, d_name);
+  (void)fprintf(stderr,
+				"pattern=%s, name=%s\n",
+				pattern,
+				d_name);
 #endif
   matched = fnmatch(pattern, d_name, flag);
     
@@ -213,13 +195,19 @@ comp_regex(reg_t *rep)
   retval = regcomp(fmt, str, cflag);
 
   if (retval != 0) {
-	
 	if (regerror(retval, fmt, msg, LINE_MAX) > 0) {
-	  (void)fprintf(stderr, "%s: %s: %s\n", opts->prog_name, str, msg);
+	  (void)fprintf(stderr,
+					"%s: %s: %s\n",
+					opts->prog_name,
+					str,
+					msg);
 	} else {
-	  (void)fprintf(stderr, "%s: %s: %s\n", opts->prog_name, str, strerror(errno));
+	  (void)fprintf(stderr,
+					"%s: %s: %s\n",
+					opts->prog_name,
+					str,
+					strerror(errno));
 	}
-	
 	regfree(fmt);
 	exit(0);
   }
@@ -227,7 +215,7 @@ comp_regex(reg_t *rep)
 
 
 int
-exec_regex(char *d_name, reg_t *rep)
+exec_regex(const char *d_name, reg_t *rep)
 {
   int retval, len, matched;
   regex_t *fmt;
@@ -249,17 +237,23 @@ exec_regex(char *d_name, reg_t *rep)
   if (retval != 0 && retval != REG_NOMATCH) {
 	
 	if (regerror(retval, fmt, msg, LINE_MAX) > 0) {
-	  (void)fprintf(stderr, "%s: %s: %s\n", opts->prog_name, str, msg);
+	  (void)fprintf(stderr,
+					"%s: %s: %s\n",
+					opts->prog_name,
+					str,
+					msg);
 	} else {
-	  (void)fprintf(stderr, "%s: %s: %s\n", opts->prog_name, str, strerror(errno));
+	  (void)fprintf(stderr,
+					"%s: %s: %s\n",
+					opts->prog_name,
+					str,
+					strerror(errno));
 	}
-	
 	regfree(fmt);
 	exit(0);
   }
 
   matched = retval == 0 && pmatch.rm_so == 0 && pmatch.rm_eo == len;
-
   return ((matched) ? 1 : 0);
 }
 
@@ -268,119 +262,99 @@ free_regex(reg_t *rep)
 {
   regfree(&(rep->re_fmt));
   free(rep);
+  rep = NULL;
   return;
 }
 
 void
-walk_through(char *n_name, char *d_name)
+walk_through(const char *n_name, const char *d_name)
 {
-  DIR *dirp;
-  struct dirent *dir;
-  char p_buf[MAXPATHLEN], tmp_buf[MAXPATHLEN];
-  int ndir;
   int found;
+  char tmp_buf[MAXPATHLEN];
+  struct dirent *dir;
+  DIR *dirp;
+  bst_node *np;
   
-  if (NT_ERROR == tell_type(n_name)) {
-	(void)fprintf(stderr, "%s: %s: %s\n", opts->prog_name, n_name, strerror(errno));
+  if (_nstat(n_name) == NT_ERROR) {
+	(void)fprintf(stderr,
+				  "%s: %s: %s\n",
+				  opts->prog_name,
+				  n_name,
+				  strerror(errno));
 	return;
   }
 
-  found = 0;
-  bzero(p_buf, MAXPATHLEN);
-  strncpy(p_buf, n_name, MAXPATHLEN);
-  
-  if (opts->exec_func(d_name, rep) &&
-	  (NT_UNKNOWN == opts->n_type ||
-	   node_stat->type == opts->n_type)) {
+  if (opts->sort == 1 && stree == NULL)
+	stree = bst_init();
 
-	found = 1;
-
-	if (opts->delete) {
-	  
-	  if (NT_ISDIR != node_stat->type) {
-
-		if (0 > unlink(p_buf))
-		  (void)fprintf(stderr, "%s: --delete: unlink(%s): %s\n", opts->prog_name, n_name, strerror(errno));
-	 
-	  } else {
-		
-		if (0 > rmdir(p_buf))
-		  (void)fprintf(stderr, "%s: --delete: rmdir(%s): %s\n", opts->prog_name, n_name, strerror(errno));
-	  }
-	  
-	  return;
+  if (node_stat->type != NT_ISDIR) {
+	if ((found = _found(n_name, d_name)) == 1) {
+	  if (opts->sort == 1)
+		bst_ins(n_name, stree, 0);
 	}
-	  
-	
-	if (opts->find_empty) {
-	  
-	  if (0 == node_stat->size &&
-		  NT_ISDIR != node_stat->type) {
-		if (!opts->sort)
-		  (void)fprintf(stdout, "%s\n", p_buf);
-		else
-		  bst_ins(p_buf, stree, 0);
-	  }
-	} else {
-	  if (!opts->sort)
-		(void)fprintf(stdout, "%s\n", p_buf);
-	  else
-		bst_ins(p_buf, stree, 0);
-	}
-  }
-  
-  if (NT_ISDIR == node_stat->type) {
 
-	/* in a new dir, starting to count */
-	/* dir entries.                    */
-	ndir = 0;
+  } else {
 	
-	if ( (dirp = opendir(p_buf)) == NULL) {
-	  (void)fprintf(stderr, "%s: %s: %s\n", opts->prog_name, p_buf, strerror(errno));
+	if ( (dirp = opendir(n_name)) == NULL) {
+	  (void)fprintf(stderr,
+					"%s: %s: %s\n",
+					opts->prog_name,
+					n_name,
+					strerror(errno));
 	  return;
 	}
 	
 	while ( (dir = readdir(dirp)) != NULL) {
-
-	  ndir++;
-	  
-	  if (strncmp(dir->d_name, ".", 2) != 0 &&
-		  strncmp(dir->d_name, "..", 3) != 0) {
+	  if ((strncmp(dir->d_name, ".", 2) != 0) &&
+		  (strncmp(dir->d_name, "..", 3) != 0)) {
 		bzero(tmp_buf, MAXPATHLEN);
-		strncat(tmp_buf, p_buf, MAXPATHLEN);
-		
-		if (p_buf[strlen(p_buf) - 1] != '/')
+		strncpy(tmp_buf, n_name, MAXPATHLEN);
+
+		if (tmp_buf[strlen(tmp_buf) - 1] != '/')
 		  strncat(tmp_buf, "/", MAXPATHLEN);
-		
 		strncat(tmp_buf, dir->d_name, MAXPATHLEN);
+
+		if ((found = _found(tmp_buf, d_name)) == 1) {
+		  if (opts->sort == 1)
+			bst_ins(n_name, stree, 0);
+		}
+
 		walk_through(tmp_buf, dir->d_name);
 	  }
-	}
-
-	if (found) {
-	  
-	  if (opts->find_empty &&
-		  NT_ISDIR == node_stat->type &&
-		  2 >= ndir) {
-		if (!opts->sort)
-		  (void)fprintf(stdout, "%s\n", p_buf);
-		else
-		  bst_ins(p_buf, stree, 0);
-	  }
-	}
-
+	}	
 	closedir(dirp);
+	
+	if (opts->sort == 1) {
+	  bst_proc(stree, BST_INORDER, _procnode);
+	  bst_free(stree);
+	  stree = NULL;
+	}
   }
+  
   return;
 }
 
 void
 display_usage(void)
 {
-  static const char *usage = "usage: %s [-EILPsv] ... [-n|--name ...] [-r|--regex ...] [-t|--type ...] [--empty]\n";
+  static const char *usage = "usage:\t%s [-EILPsv]\
+ ...\
+ [-f|--path ...]\
+ [-n|--name ...]\
+ [-r|--regex ...]\
+ [-t|--type ...]\
+ [--empty]\
+ [--sort]\n\
+ \t%s [-EILPsv]\
+ -f | --path ...\
+ [...]\
+ [-n|--name ...]\
+ [-r|--regex ...]\
+ [-t|--type ...]\
+ [--empty]\
+ [--sort]\n";
 
-  (void)fprintf(stderr, usage, opts->prog_name);
-  
+  (void)fprintf(stderr, usage, opts->prog_name, opts->prog_name);
   exit (0);
 }
 
@@ -389,5 +363,94 @@ display_version(void)
 {  
   (void)fprintf(stderr, "%s version %s\n", opts->prog_name, opts->prog_version);
   exit (0);
+}
+
+static void
+_outprt(const bst_node *np)
+{
+  if (np != NULL) {
+	if (np->node != NULL)
+	  (void)fprintf(stdout, "%s\n", np->node);
+  }
+}
+
+static void
+_procnode(const bst_node *np)
+{
+  if (np != NULL) {
+	if (np->node != NULL) {
+	  _outprt(np);
+	}
+  }
+}
+
+static int
+_nstat(const char *d_name)
+{
+  struct stat stbuf;
   
+  if (opts->stat_func(d_name, &stbuf)  < 0 )
+	return (NT_ERROR);
+
+  node_stat->empty = 0;
+
+  if (S_ISBLK(stbuf.st_mode))
+	node_stat->type = NT_ISBLK;
+  if (S_ISCHR(stbuf.st_mode))
+	node_stat->type = NT_ISCHR;
+  if (S_ISDIR(stbuf.st_mode))
+	node_stat->type = NT_ISDIR;
+  if (S_ISFIFO(stbuf.st_mode))
+	node_stat->type = NT_ISFIFO;
+  if (S_ISLNK(stbuf.st_mode))
+	node_stat->type = NT_ISLNK;
+  if (S_ISREG(stbuf.st_mode))
+	node_stat->type = NT_ISREG;
+  if (S_ISSOCK(stbuf.st_mode))
+	node_stat->type = NT_ISSOCK;
+#ifndef _OpenBSD_
+  if (S_ISWHT(stbuf.st_mode))
+	node_stat->type = NT_ISWHT;
+#endif
+  
+  if (node_stat->type == NT_ISDIR) {
+	if ((stbuf.st_nlink <= 2) &&
+		(stbuf.st_size <= 2)) {
+	  node_stat->empty = 1;
+#ifdef _DEBUG_
+	  (void)fprintf(stderr, "%s: empty directory.\n", d_name);
+#endif
+	}
+  } else {
+	if (stbuf.st_size == 0) {
+	  node_stat->empty = 1;
+#ifdef _DEBUG_
+	  (void)fprintf(stderr, "%s: empty file.\n", d_name);
+#endif
+	}
+  }
+  
+  return (NT_UNKNOWN);
+}
+
+static int
+_found(const char *n_name, const char *d_name)
+{
+  if ((opts->exec_func(d_name, rep) == 1) &&
+	  ((opts->n_type == NT_UNKNOWN) ||
+	   (opts->n_type == node_stat->type))) {
+
+	if (opts->find_empty == 1) {
+	  if (node_stat->empty == 1) {
+		if (opts->sort != 1)
+		  (void)fprintf(stdout, "%s\n", n_name);
+	  }
+	} else {
+	  if (opts->sort != 1)
+		(void)fprintf(stdout, "%s\n", n_name);
+	}
+	
+	return (1);
+  }
+  return (0);
 }

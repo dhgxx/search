@@ -28,7 +28,6 @@
 #include "extern.h"
 
 static void cleanup(int);
-static void _echo(const bst_node *);
 
 int
 main(int argc, char *argv[])
@@ -42,16 +41,18 @@ main(int argc, char *argv[])
   (void)setlocale(LC_CTYPE, "");
   signal(SIGINT, cleanup);
   
-  rep = malloc(sizeof(reg_t));
-  opts = malloc(sizeof(options_t));
-  node_stat = malloc(sizeof(node_stat_t));
+  rep = (reg_t *)malloc(sizeof(reg_t));
+  opts = (options_t *)malloc(sizeof(options_t));
+  node_stat = (node_stat_t *)malloc(sizeof(node_stat_t));
   
-  if (!rep || !opts || !node_stat) {
+  if (rep == NULL ||
+	  opts == NULL ||
+	  node_stat == NULL) {
 	(void)fprintf(stderr, "malloc(3): %s.\n", strerror(errno));
 	exit(0);
   }
 
-  opts->prog_name = SEARCH_NAME; /* `prog_name` is defined in `search.h'. */
+  opts->prog_name = SEARCH_NAME;
   opts->prog_version = SEARCH_VERSION;
   opts->n_type = 0;
   opts->stat_func = lstat;
@@ -74,63 +75,50 @@ main(int argc, char *argv[])
 	  opts->find_path == 0)
 	display_usage();
 
-  if (opts->sort) {
-	if (!(stree = bst_init())) {
-	  (void)fprintf(stderr, "%s: malloc(3): %s.\n", opts->prog_name, strerror(errno));
-	  exit(0);
-	}
-  }
-	
-  if (!opts->exec_func)
+  if (opts->exec_func == NULL)
 	opts->exec_func = exec_name;
   
   comp_regex(rep);
 
-  if (opts->find_path)
+  if (opts->find_path == 1)
 	walk_through(opts->path, opts->path);
 
   if (argc > 0) {
 	for (i = 0; i < argc && argv[i]; i++)
 	  walk_through(argv[i], argv[i]);
   }
-
-  if (opts->sort && stree) {
-	bst_proc(stree, BST_INORDER, _echo);
-	bst_free(stree);
-  }
   
   free_regex(rep);
+  rep = NULL;
   free(opts);
+  opts = NULL;
   free(node_stat);
-  
+  node_stat = NULL;
   exit(0);
 }
 
 static void
 cleanup(int sig)
 {
-  fprintf(stderr, "\nUser interrupted, cleaning up...\n");
+  (void)fprintf(stderr, "\nUser interrupted, cleaning up...\n");
   
-  if (opts->sort && stree)
-	bst_free(stree);
-
-  if (rep)
+  if (rep != NULL) {
 	free_regex(rep);
+	rep = NULL;
+  }
   
-  if (opts)
+  if (opts != NULL) {
 	free(opts);
+	opts = NULL;
+  }
   
-  if (node_stat)
+  if (node_stat != NULL) {
 	free(node_stat);
+	node_stat = NULL;
+  }
   
   if (sig)
 	exit(1);
 
 }
 
-static void
-_echo(const bst_node *np)
-{
-  if (np)
-	(void)fprintf(stdout, "%s\n", np->node);
-}
