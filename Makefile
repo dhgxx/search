@@ -29,11 +29,11 @@ MYCFLAGS=		${CFLAGS} -D_${OSNAME}_
 MYCFLAGS=		-O2 -pipe -D_{OSNAME}_
 .endif
 
-.if !defined(DEBUG)
-STRIP=			-s
-.else
+.if defined(DEBUG)
 STRIP=
-MYCFLAGS+=		-ggdb -D_DEBUG_
+MYCFLAGS+=		-ggdb
+.else
+STRIP=			-s
 .endif
 
 .if ${OSNAME} == "FreeBSD"
@@ -56,31 +56,43 @@ INST_TYPE=		user-install
 
 all: ${OBJS} ${PROG} makeman
 
-install: ${INST_TYPE}
+install: all ${INST_TYPE}
+
+sys-install: install-bin install-man
 
 ${OBJS}: ${SRCS} ${HDRS}
 .for i in ${SRCS}
 	${CC} ${MYCFLAGS} ${OPT_INC} -c $i
 .endfor
 
-${PROG}:
+${PROG}: ${SRCS} ${HDRS}
 	${CC} ${MYCFLAGS} ${OPT_LIB} -o ${PROG} ${OBJS}
 
 makeman:
 .if ${OSNAME} == "OpenBSD"
+. if !exists(${.CURDIR}/${PROG}.cat0)
 	mandoc ${MAN} > ${PROG}.cat0
+. endif
 .elif ${OSNAME} == "FreeBSD"
+. if !exists(${.CURDIR}/${MAN}.gz)
 	gzip -cn ${MAN} > ${MAN}.gz
+. endif
 .endif
 
+<<<<<<< HEAD
 sys-install:
 	${INSTALL} ${STRIP} -o root -g ${BINGRP} -m 0755 ${PROG} ${OPT_BINDIR}
+=======
+install-bin:
+	${INSTALL} ${STRIP} -o root -g ${BINGRP} -m 0755 ${PROG} ${OPT_BINDIR}
+
+install-man:
+>>>>>>> master
 	${INSTALL} -o root -g ${BINGRP} -m 0444 ${MFILE} ${MANDIR}/${MFILE:S/.cat0$/.0/g}
 	${MKWHATIS} ${OPT_MANDIR}
 
 user-install:
-	${INSTALL} -o `id -u` -g `id -g` -m 0755 ${PROG} ${HOME}/bin
+	${INSTALL} ${STRIP} -o `id -u` -g `id -g` -m 0755 ${PROG} ${HOME}/bin
 
 clean:
 	rm -f ${PROG} *.o *.cat* *.gz
-
