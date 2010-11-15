@@ -79,15 +79,10 @@ makeman:
 . endif
 .endif
 
-<<<<<<< HEAD
-sys-install:
-	${INSTALL} ${STRIP} -o root -g ${BINGRP} -m 0755 ${PROG} ${OPT_BINDIR}
-=======
 install-bin:
 	${INSTALL} ${STRIP} -o root -g ${BINGRP} -m 0755 ${PROG} ${OPT_BINDIR}
 
 install-man:
->>>>>>> master
 	${INSTALL} -o root -g ${BINGRP} -m 0444 ${MFILE} ${MANDIR}/${MFILE:S/.cat0$/.0/g}
 	${MKWHATIS} ${OPT_MANDIR}
 

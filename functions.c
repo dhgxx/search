@@ -162,7 +162,6 @@ exec_name(const char *d_name, reg_t *rep)
 	flag = FNM_CASEFOLD | FNM_PERIOD | FNM_PATHNAME | FNM_NOESCAPE;
   }
   
-<<<<<<< HEAD
 #ifdef _DEBUG_
   (void)fprintf(stderr,
 				"pattern=%s, name=%s\n",
