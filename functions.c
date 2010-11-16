@@ -29,7 +29,6 @@
 static int opt_empty;
 static int opt_delete;
 
-static void proc_node(const dl_node *);
 static int get_type(const char *);
 static int cook_entry(const char *, const char *);
 
@@ -271,6 +270,7 @@ walk_through(const char *n_name, const char *d_name)
   struct dirent *dir;
   DIR *dirp;
   DLIST *slist;
+  DLIST *frem, *drem;
   
   if (get_type(n_name) == NT_ERROR) {
 	(void)fprintf(stderr,
@@ -281,8 +281,20 @@ walk_through(const char *n_name, const char *d_name)
 	return;
   }
 
+  if (opts->delete == 1) {
+	frem = dl_init();
+	drem = dl_init();
+  }
+  
   slist = dl_init();
-  cook_entry(n_name, d_name);
+  if (1 == cook_entry(n_name, d_name)) {
+	if (opts->delete == 1) {
+	  if (node_stat->type == NT_ISDIR)
+		dl_append(n_name, drem);
+	  else
+		dl_append(n_name, frem);
+	}
+  }
   
   if (node_stat->type == NT_ISDIR) {
 	
@@ -319,6 +331,45 @@ walk_through(const char *n_name, const char *d_name)
 	closedir(dirp);
   }
 
+  if (opts->delete == 1) {
+	if (frem != NULL) {
+	  frem->cur = frem->head;
+	  while (frem->cur != NULL) {
+		if (unlink(frem->cur->node) < 0)
+		  (void)fprintf(stderr,
+						"%s: --delete: unlink(%s): %s\n",
+						opts->prog_name,
+						frem->cur->node,
+						strerror(errno));
+		frem->cur = frem->cur->next;
+	  }
+	}
+	  
+	if (drem != NULL) {
+	  drem->cur = drem->head;
+	  while (drem->cur != NULL) {
+		if (rmdir(drem->cur->node) < 0)
+		  (void)fprintf(stderr,
+						"%s: --delete: rmdir(%s): %s\n",
+						opts->prog_name,
+						drem->cur->node,
+						strerror(errno));
+		drem->cur = drem->cur->next;
+	  }
+	}
+  }
+
+  if (opts->delete == 1) {
+	if (frem != NULL) {
+	  dl_free(frem);
+	  frem = NULL;
+	}
+	if (drem != NULL) {
+	  dl_free(drem);
+	  drem = NULL;
+	}
+  }
+  
   if (slist != NULL) {
 	dl_free(slist);
 	slist = NULL;
@@ -362,16 +413,6 @@ display_version(void)
 				opts->prog_name,
 				opts->prog_version);
   exit (0);
-}
-
-static void
-proc_node(const dl_node *np)
-{
-  if (np != NULL) {
-	if (np->node != NULL) {
-	  (void)fprintf(stdout, "%s\n", (np->node));
-	}
-  }
 }
 
 static int
@@ -432,10 +473,12 @@ cook_entry(const char *n_name, const char *d_name)
 
 	if (opts->find_empty == 1) {
 	  if (node_stat->empty == 1) {
-		(void)fprintf(stdout, "%s\n", n_name);
+		if (opts->delete != 1)
+		  (void)fprintf(stdout, "%s\n", n_name);
 	  }
 	} else {
-	  (void)fprintf(stdout, "%s\n", n_name);
+	  if (opts->delete != 1)
+		(void)fprintf(stdout, "%s\n", n_name);
 	}
 	return (1);
   }
