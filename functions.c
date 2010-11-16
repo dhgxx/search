@@ -30,7 +30,7 @@ static int opt_empty;
 static int opt_delete;
 static BSTREE *stree;
 
-static void _outprt(const bst_node *);
+static void _outprt(const char *);
 static void _procnode(const bst_node *);
 static int _nstat(const char *);
 static int _found(const char *, const char *);
@@ -287,14 +287,14 @@ walk_through(const char *n_name, const char *d_name)
   if (opts->sort == 1 && stree == NULL)
 	stree = bst_init();
 
-  if (node_stat->type != NT_ISDIR) {
-	if ((found = _found(n_name, d_name)) == 1) {
-	  if (opts->sort == 1)
-		bst_ins(n_name, stree, 0);
-	}
 
-  } else {
-	
+  if ((found = _found(n_name, d_name)) == 1) {
+	if (opts->sort == 1)
+	  bst_ins(n_name, stree, 0);
+  }
+
+  if (node_stat->type == NT_ISDIR) {
+
 	if ( (dirp = opendir(n_name)) == NULL) {
 	  (void)fprintf(stderr,
 					"%s: %s: %s\n",
@@ -309,15 +309,15 @@ walk_through(const char *n_name, const char *d_name)
 		  (strncmp(dir->d_name, "..", 3) != 0)) {
 		bzero(tmp_buf, MAXPATHLEN);
 		strncpy(tmp_buf, n_name, MAXPATHLEN);
-
+		
 		if (tmp_buf[strlen(tmp_buf) - 1] != '/')
 		  strncat(tmp_buf, "/", MAXPATHLEN);
 		strncat(tmp_buf, dir->d_name, MAXPATHLEN);
 
-		if ((found = _found(tmp_buf, d_name)) == 1) {
-		  if (opts->sort == 1)
-			bst_ins(n_name, stree, 0);
-		}
+		/* if ((found = _found(tmp_buf, d_name)) == 1) { */
+		/*   if (opts->sort == 1) */
+		/* 	bst_ins(n_name, stree, 0); */
+		/* } */
 
 		walk_through(tmp_buf, dir->d_name);
 	  }
@@ -330,7 +330,6 @@ walk_through(const char *n_name, const char *d_name)
 	  stree = NULL;
 	}
   }
-  
   return;
 }
 
@@ -354,24 +353,28 @@ display_usage(void)
  [--empty]\
  [--sort]\n";
 
-  (void)fprintf(stderr, usage, opts->prog_name, opts->prog_name);
+  (void)fprintf(stderr,
+				usage,
+				opts->prog_name,
+				opts->prog_name);
   exit (0);
 }
 
 void
 display_version(void)
 {  
-  (void)fprintf(stderr, "%s version %s\n", opts->prog_name, opts->prog_version);
+  (void)fprintf(stderr,
+				"%s version %s\n",
+				opts->prog_name,
+				opts->prog_version);
   exit (0);
 }
 
 static void
-_outprt(const bst_node *np)
+_outprt(const char *str)
 {
-  if (np != NULL) {
-	if (np->node != NULL)
-	  (void)fprintf(stdout, "%s\n", np->node);
-  }
+  if (str != NULL)
+	(void)fprintf(stdout, "%s\n", str);
 }
 
 static void
@@ -379,7 +382,7 @@ _procnode(const bst_node *np)
 {
   if (np != NULL) {
 	if (np->node != NULL) {
-	  _outprt(np);
+	  _outprt(np->node);
 	}
   }
 }
@@ -418,10 +421,10 @@ _nstat(const char *d_name)
 		(stbuf.st_size <= 2)) {
 	  node_stat->empty = 1;
 #ifdef _DEBUG_
-	  (void)fprintf(stderr, "%s: empty directory.\n", d_name);
+	  (void)fprintf(stderr,"%s: empty directory.\n", d_name);
 #endif
 	}
-  } else {
+  } else { /* node is not a directory. */
 	if (stbuf.st_size == 0) {
 	  node_stat->empty = 1;
 #ifdef _DEBUG_
@@ -449,7 +452,6 @@ _found(const char *n_name, const char *d_name)
 	  if (opts->sort != 1)
 		(void)fprintf(stdout, "%s\n", n_name);
 	}
-	
 	return (1);
   }
   return (0);
