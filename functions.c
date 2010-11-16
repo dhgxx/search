@@ -28,12 +28,10 @@
 
 static int opt_empty;
 static int opt_delete;
-static BSTREE *stree;
 
-static void _outprt(const char *);
-static void _procnode(const bst_node *);
-static int _nstat(const char *);
-static int _found(const char *, const char *);
+static void proc_node(const dl_node *);
+static int get_type(const char *);
+static int cook_entry(const char *, const char *);
 
 void lookup_option(int, char **);
 void comp_regex(reg_t *);
@@ -162,7 +160,7 @@ exec_name(const char *d_name, reg_t *rep)
 	flag = FNM_CASEFOLD | FNM_PERIOD | FNM_PATHNAME | FNM_NOESCAPE;
   }
   
-#ifdef __DEBUG__
+#ifdef _DEBUG_
   (void)fprintf(stderr,
 				"pattern=%s, name=%s\n",
 				pattern,
@@ -269,13 +267,12 @@ free_regex(reg_t *rep)
 void
 walk_through(const char *n_name, const char *d_name)
 {
-  int found;
   char tmp_buf[MAXPATHLEN];
   struct dirent *dir;
   DIR *dirp;
-  bst_node *np;
+  DLIST *slist;
   
-  if (_nstat(n_name) == NT_ERROR) {
+  if (get_type(n_name) == NT_ERROR) {
 	(void)fprintf(stderr,
 				  "%s: %s: %s\n",
 				  opts->prog_name,
@@ -284,17 +281,11 @@ walk_through(const char *n_name, const char *d_name)
 	return;
   }
 
-  if (opts->sort == 1 && stree == NULL)
-	stree = bst_init();
-
-
-  if ((found = _found(n_name, d_name)) == 1) {
-	if (opts->sort == 1)
-	  bst_ins(n_name, stree, 0);
-  }
-
+  slist = dl_init();
+  cook_entry(n_name, d_name);
+  
   if (node_stat->type == NT_ISDIR) {
-
+	
 	if ( (dirp = opendir(n_name)) == NULL) {
 	  (void)fprintf(stderr,
 					"%s: %s: %s\n",
@@ -313,23 +304,26 @@ walk_through(const char *n_name, const char *d_name)
 		if (tmp_buf[strlen(tmp_buf) - 1] != '/')
 		  strncat(tmp_buf, "/", MAXPATHLEN);
 		strncat(tmp_buf, dir->d_name, MAXPATHLEN);
-
-		/* if ((found = _found(tmp_buf, d_name)) == 1) { */
-		/*   if (opts->sort == 1) */
-		/* 	bst_ins(n_name, stree, 0); */
-		/* } */
-
-		walk_through(tmp_buf, dir->d_name);
+		dl_append(tmp_buf, slist);
 	  }
-	}	
-	closedir(dirp);
-	
-	if (opts->sort == 1) {
-	  bst_proc(stree, BST_INORDER, _procnode);
-	  bst_free(stree);
-	  stree = NULL;
 	}
+
+	if (opts->sort == 1)
+	  dl_sort(slist);
+
+	slist->cur = slist->head;
+	while (slist->cur != NULL) {
+	  walk_through(slist->cur->node, d_name);
+	  slist->cur = slist->cur->next;
+	}
+	closedir(dirp);
   }
+
+  if (slist != NULL) {
+	dl_free(slist);
+	slist = NULL;
+  }
+  
   return;
 }
 
@@ -371,24 +365,17 @@ display_version(void)
 }
 
 static void
-_outprt(const char *str)
-{
-  if (str != NULL)
-	(void)fprintf(stdout, "%s\n", str);
-}
-
-static void
-_procnode(const bst_node *np)
+proc_node(const dl_node *np)
 {
   if (np != NULL) {
 	if (np->node != NULL) {
-	  _outprt(np->node);
+	  (void)fprintf(stdout, "%s\n", (np->node));
 	}
   }
 }
 
 static int
-_nstat(const char *d_name)
+get_type(const char *d_name)
 {
   struct stat stbuf;
   
@@ -437,7 +424,7 @@ _nstat(const char *d_name)
 }
 
 static int
-_found(const char *n_name, const char *d_name)
+cook_entry(const char *n_name, const char *d_name)
 {
   if ((opts->exec_func(d_name, rep) == 1) &&
 	  ((opts->n_type == NT_UNKNOWN) ||
@@ -445,12 +432,10 @@ _found(const char *n_name, const char *d_name)
 
 	if (opts->find_empty == 1) {
 	  if (node_stat->empty == 1) {
-		if (opts->sort != 1)
-		  (void)fprintf(stdout, "%s\n", n_name);
+		(void)fprintf(stdout, "%s\n", n_name);
 	  }
 	} else {
-	  if (opts->sort != 1)
-		(void)fprintf(stdout, "%s\n", n_name);
+	  (void)fprintf(stdout, "%s\n", n_name);
 	}
 	return (1);
   }

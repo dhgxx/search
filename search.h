@@ -43,8 +43,7 @@
 #include <signal.h>
 #include <fnmatch.h>
 #include <locale.h>
-#include <bstree.h>
-#include <stack.h>
+#include <dlist.h>
 
 #define SEARCH_NAME "search"
 #define SEARCH_VERSION "0.3"
