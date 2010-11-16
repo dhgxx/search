@@ -46,7 +46,7 @@
 #include <dlist.h>
 
 #define SEARCH_NAME "search"
-#define SEARCH_VERSION "0.3"
+#define SEARCH_VERSION "0.4"
 
 typedef enum _node_t {
   NT_UNKNOWN = DT_UNKNOWN,
