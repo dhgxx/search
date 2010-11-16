@@ -281,18 +281,21 @@ walk_through(const char *n_name, const char *d_name)
 	return;
   }
 
+  slist = dl_init();
   if (opts->delete == 1) {
 	frem = dl_init();
 	drem = dl_init();
   }
-  
-  slist = dl_init();
+    
   if (1 == cook_entry(n_name, d_name)) {
 	if (opts->delete == 1) {
-	  if (node_stat->type == NT_ISDIR)
-		dl_append(n_name, drem);
-	  else
+	  if (node_stat->type != NT_ISDIR) {
 		dl_append(n_name, frem);
+	  } else {
+		if (0 != strncmp(d_name, ".", 2) &&
+			0 != strncmp(d_name, "..", 3))
+		  dl_append(n_name, drem);
+	  }
 	}
   }
   
