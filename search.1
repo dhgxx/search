@@ -129,12 +129,11 @@ same as
 .Sh NOTES
 As
 .Nm
-is just a programming practice work. Now it uses a binary search tree
-to sort the search results, which is rather time-cosuming and
-memory-intensive for a large file hierachy. For instance, if you run 
-.Ql search -s / ,
-just get a cup of coffe and read some news before the output should
-pop out ...
+is just a programming practice work. Now it uses a doubly linked list
+to sort the search results, which may consume more memory and be a bit
+slower for a large file hierachy than the classic
+.Ql find
+found on most UNIX systems and clones.
 .Sh HISTORY
 A
 .Nm
