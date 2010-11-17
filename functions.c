@@ -266,6 +266,7 @@ free_regex(reg_t *rep)
 void
 walk_through(const char *n_name, const char *d_name)
 {
+  int found;
   char tmp_buf[MAXPATHLEN];
   struct dirent *dir;
   DIR *dirp;
@@ -286,19 +287,20 @@ walk_through(const char *n_name, const char *d_name)
 	frem = dl_init();
 	drem = dl_init();
   }
-    
-  if (1 == cook_entry(n_name, d_name)) {
+
+  found = cook_entry(n_name, d_name);
+  
+  if (found == 1) {
 	if (opts->delete == 1) {
 	  if (node_stat->type != NT_ISDIR) {
+#ifdef _DEBUG
+		fprintf(stderr, "delete: %s\n", n_name);
+#endif
 		dl_append(n_name, frem);
-	  } else {
-		if (0 != strncmp(d_name, ".", 2) &&
-			0 != strncmp(d_name, "..", 3))
-		  dl_append(n_name, drem);
 	  }
 	}
   }
-  
+
   if (node_stat->type == NT_ISDIR) {
 	
 	if ( (dirp = opendir(n_name)) == NULL) {
@@ -319,6 +321,13 @@ walk_through(const char *n_name, const char *d_name)
 		if (tmp_buf[strlen(tmp_buf) - 1] != '/')
 		  strncat(tmp_buf, "/", MAXPATHLEN);
 		strncat(tmp_buf, dir->d_name, MAXPATHLEN);
+		
+		if (opts->delete == 1) {
+#ifdef _DEBUG_
+		  fprintf(stderr, "delete: %s\n", dir->d_name);
+#endif
+		  dl_append(dir->d_name, drem);
+		}
 		dl_append(tmp_buf, slist);
 	  }
 	}
@@ -478,12 +487,17 @@ cook_entry(const char *n_name, const char *d_name)
 	  if (node_stat->empty == 1) {
 		if (opts->delete != 1)
 		  (void)fprintf(stdout, "%s\n", n_name);
+		return (1);
 	  }
-	} else {
-	  if (opts->delete != 1)
-		(void)fprintf(stdout, "%s\n", n_name);
+	  return (0);
 	}
+	
+	if (opts->delete != 1) {
+	  (void)fprintf(stdout, "%s\n", n_name);
+	}
+
 	return (1);
   }
+  
   return (0);
 }
