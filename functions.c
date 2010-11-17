@@ -297,6 +297,14 @@ walk_through(const char *n_name, const char *d_name)
 		fprintf(stderr, "delete: %s\n", n_name);
 #endif
 		dl_append(n_name, frem);
+	  } else {
+		if ((strncmp(n_name, ".", 2) != 0) &&
+			(strncmp(n_name, "..", 3) != 0)) {
+#ifdef _DEBUG_
+		  fprintf(stderr, "delete: %s\n", n_name);
+#endif
+		  dl_append(n_name, drem);
+		}
 	  }
 	}
   }
@@ -315,20 +323,7 @@ walk_through(const char *n_name, const char *d_name)
 	while ( (dir = readdir(dirp)) != NULL) {
 	  if ((strncmp(dir->d_name, ".", 2) != 0) &&
 		  (strncmp(dir->d_name, "..", 3) != 0)) {
-		bzero(tmp_buf, MAXPATHLEN);
-		strncpy(tmp_buf, n_name, MAXPATHLEN);
-		
-		if (tmp_buf[strlen(tmp_buf) - 1] != '/')
-		  strncat(tmp_buf, "/", MAXPATHLEN);
-		strncat(tmp_buf, dir->d_name, MAXPATHLEN);
-		
-		if (opts->delete == 1) {
-#ifdef _DEBUG_
-		  fprintf(stderr, "delete: %s\n", dir->d_name);
-#endif
-		  dl_append(dir->d_name, drem);
-		}
-		dl_append(tmp_buf, slist);
+		dl_append(dir->d_name, slist);
 	  }
 	}
 
@@ -337,7 +332,12 @@ walk_through(const char *n_name, const char *d_name)
 
 	slist->cur = slist->head;
 	while (slist->cur != NULL) {
-	  walk_through(slist->cur->node, d_name);
+	  bzero(tmp_buf, MAXPATHLEN);
+	  strncpy(tmp_buf, n_name, MAXPATHLEN);
+	  if (tmp_buf[strlen(tmp_buf) - 1] != '/')
+		strncat(tmp_buf, "/", MAXPATHLEN);
+	  strncat(tmp_buf, slist->cur->node, MAXPATHLEN);
+	  walk_through(tmp_buf, slist->cur->node);
 	  slist->cur = slist->cur->next;
 	}
 	closedir(dirp);
@@ -498,6 +498,6 @@ cook_entry(const char *n_name, const char *d_name)
 
 	return (1);
   }
-  
+
   return (0);
 }
