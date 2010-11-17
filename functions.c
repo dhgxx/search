@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2005-2007 Denise H. G. All rights reserved
+ * Copyright (c) 2005-2010 Denise H. G. All rights reserved
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,7 +29,6 @@
 static int opt_empty;
 static int opt_delete;
 
-static void proc_node(const dl_node *);
 static int get_type(const char *);
 static int cook_entry(const char *, const char *);
 
@@ -267,10 +266,12 @@ free_regex(reg_t *rep)
 void
 walk_through(const char *n_name, const char *d_name)
 {
+  int found;
   char tmp_buf[MAXPATHLEN];
   struct dirent *dir;
   DIR *dirp;
   DLIST *slist;
+  DLIST *frem, *drem;
   
   if (get_type(n_name) == NT_ERROR) {
 	(void)fprintf(stderr,
@@ -282,8 +283,32 @@ walk_through(const char *n_name, const char *d_name)
   }
 
   slist = dl_init();
-  cook_entry(n_name, d_name);
+  if (opts->delete == 1) {
+	frem = dl_init();
+	drem = dl_init();
+  }
+
+  found = cook_entry(n_name, d_name);
   
+  if (found == 1) {
+	if (opts->delete == 1) {
+	  if (node_stat->type != NT_ISDIR) {
+#ifdef _DEBUG
+		fprintf(stderr, "delete: %s\n", n_name);
+#endif
+		dl_append(n_name, frem);
+	  } else {
+		if ((strncmp(n_name, ".", 2) != 0) &&
+			(strncmp(n_name, "..", 3) != 0)) {
+#ifdef _DEBUG_
+		  fprintf(stderr, "delete: %s\n", n_name);
+#endif
+		  dl_append(n_name, drem);
+		}
+	  }
+	}
+  }
+
   if (node_stat->type == NT_ISDIR) {
 	
 	if ( (dirp = opendir(n_name)) == NULL) {
@@ -298,13 +323,7 @@ walk_through(const char *n_name, const char *d_name)
 	while ( (dir = readdir(dirp)) != NULL) {
 	  if ((strncmp(dir->d_name, ".", 2) != 0) &&
 		  (strncmp(dir->d_name, "..", 3) != 0)) {
-		bzero(tmp_buf, MAXPATHLEN);
-		strncpy(tmp_buf, n_name, MAXPATHLEN);
-		
-		if (tmp_buf[strlen(tmp_buf) - 1] != '/')
-		  strncat(tmp_buf, "/", MAXPATHLEN);
-		strncat(tmp_buf, dir->d_name, MAXPATHLEN);
-		dl_append(tmp_buf, slist);
+		dl_append(dir->d_name, slist);
 	  }
 	}
 
@@ -313,12 +332,56 @@ walk_through(const char *n_name, const char *d_name)
 
 	slist->cur = slist->head;
 	while (slist->cur != NULL) {
-	  walk_through(slist->cur->node, d_name);
+	  bzero(tmp_buf, MAXPATHLEN);
+	  strncpy(tmp_buf, n_name, MAXPATHLEN);
+	  if (tmp_buf[strlen(tmp_buf) - 1] != '/')
+		strncat(tmp_buf, "/", MAXPATHLEN);
+	  strncat(tmp_buf, slist->cur->node, MAXPATHLEN);
+	  walk_through(tmp_buf, slist->cur->node);
 	  slist->cur = slist->cur->next;
 	}
 	closedir(dirp);
   }
 
+  if (opts->delete == 1) {
+	if (frem != NULL) {
+	  frem->cur = frem->head;
+	  while (frem->cur != NULL) {
+		if (unlink(frem->cur->node) < 0)
+		  (void)fprintf(stderr,
+						"%s: --delete: unlink(%s): %s\n",
+						opts->prog_name,
+						frem->cur->node,
+						strerror(errno));
+		frem->cur = frem->cur->next;
+	  }
+	}
+	  
+	if (drem != NULL) {
+	  drem->cur = drem->head;
+	  while (drem->cur != NULL) {
+		if (rmdir(drem->cur->node) < 0)
+		  (void)fprintf(stderr,
+						"%s: --delete: rmdir(%s): %s\n",
+						opts->prog_name,
+						drem->cur->node,
+						strerror(errno));
+		drem->cur = drem->cur->next;
+	  }
+	}
+  }
+
+  if (opts->delete == 1) {
+	if (frem != NULL) {
+	  dl_free(frem);
+	  frem = NULL;
+	}
+	if (drem != NULL) {
+	  dl_free(drem);
+	  drem = NULL;
+	}
+  }
+  
   if (slist != NULL) {
 	dl_free(slist);
 	slist = NULL;
@@ -362,16 +425,6 @@ display_version(void)
 				opts->prog_name,
 				opts->prog_version);
   exit (0);
-}
-
-static void
-proc_node(const dl_node *np)
-{
-  if (np != NULL) {
-	if (np->node != NULL) {
-	  (void)fprintf(stdout, "%s\n", (np->node));
-	}
-  }
 }
 
 static int
@@ -432,12 +485,19 @@ cook_entry(const char *n_name, const char *d_name)
 
 	if (opts->find_empty == 1) {
 	  if (node_stat->empty == 1) {
-		(void)fprintf(stdout, "%s\n", n_name);
+		if (opts->delete != 1)
+		  (void)fprintf(stdout, "%s\n", n_name);
+		return (1);
 	  }
-	} else {
+	  return (0);
+	}
+	
+	if (opts->delete != 1) {
 	  (void)fprintf(stdout, "%s\n", n_name);
 	}
+
 	return (1);
   }
+
   return (0);
 }

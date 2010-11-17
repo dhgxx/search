@@ -14,6 +14,7 @@
 .Op Fl n Ar pattern | Fl -name Ar pattern
 .Op Fl r Ar regexp | Fl -regex Ar regexp
 .Op Fl t Ar ftype | Fl -type Ar ftype
+.Op Fl -delete
 .Op Fl -empty
 .Op Fl -sort
 .Pp
@@ -27,6 +28,7 @@
 .Op Fl n Ar pattern | Fl -name Ar pattern
 .Op Fl r Ar regexp | Fl -regex Ar regexp
 .Op Fl t Ar ftype | Fl -type Ar ftype
+.Op Fl -delete
 .Op Fl -empty
 .Op Fl -sort
 .Sh DESCRIPTION
@@ -108,6 +110,8 @@ white out (OpenBSD doesn't have this)
 .Pp
 Long options:
 .Bl -tag -width indent
+.It Fl -delete
+delete files or directories.
 .It Fl -empty
 find empty files or directories.
 .It Fl -sort

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2005-2007 Denise H. G. All rights reserved
+ * Copyright (c) 2005-2010 Denise H. G. All rights reserved
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -48,7 +48,10 @@ main(int argc, char *argv[])
   if (rep == NULL ||
 	  opts == NULL ||
 	  node_stat == NULL) {
-	(void)fprintf(stderr, "malloc(3): %s.\n", strerror(errno));
+	(void)fprintf(stderr,
+				  "%s: malloc(3): %s.\n",
+				  SEARCH_NAME,
+				  strerror(errno));
 	exit(0);
   }
 
@@ -100,7 +103,9 @@ main(int argc, char *argv[])
 static void
 cleanup(int sig)
 {
+#ifdef _DEBUG_
   (void)fprintf(stderr, "\nUser interrupted, cleaning up...\n");
+#endif
   
   if (rep != NULL) {
 	free_regex(rep);

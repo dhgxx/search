@@ -31,7 +31,7 @@ MYCFLAGS=		-O2 -pipe -D_{OSNAME}_
 
 .if defined(DEBUG)
 STRIP=
-MYCFLAGS+=		-ggdb
+MYCFLAGS+=		-ggdb -D_DEBUG_
 .else
 STRIP=			-s
 .endif
