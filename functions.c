@@ -430,16 +430,14 @@ display_usage(void)
  [-n|--name ...]\
  [-r|--regex ...]\
  [-t|--type ...]\
- [--empty]\
- [--sort]\n\
+ [...]\n\
  \t%s [-EILPsv]\
  -f | --path ...\
  [...]\
  [-n|--name ...]\
  [-r|--regex ...]\
  [-t|--type ...]\
- [--empty]\
- [--sort]\n";
+ [...]\n";
 
   (void)fprintf(stderr,
 				usage,
