@@ -62,6 +62,10 @@ main(int argc, char *argv[])
   opts->exec_func = NULL;
   opts->find_path = 0;
   opts->find_empty = 0;
+  opts->find_gid = 0;
+  opts->find_group = 0;
+  opts->find_user = 0;
+  opts->find_uid = 0;
   opts->delete = 0;
   opts->sort = 0;
 
@@ -106,6 +110,7 @@ cleanup(int sig)
 #ifdef _DEBUG_
   (void)fprintf(stderr, "\nUser interrupted, cleaning up...\n");
 #endif
+  (void)fprintf(stderr, "\n");
   
   if (rep != NULL) {
 	free_regex(rep);
@@ -124,6 +129,5 @@ cleanup(int sig)
   
   if (sig)
 	exit(1);
-
 }
 

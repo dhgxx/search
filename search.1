@@ -9,14 +9,12 @@
 .Nm
 .Op Fl L | Fl P
 .Op Fl EIsv
-.Op Fl f Ar path | Fl -path Ar path
 .Ar path ...
+.Op Fl f Ar path | Fl -path Ar path
 .Op Fl n Ar pattern | Fl -name Ar pattern
 .Op Fl r Ar regexp | Fl -regex Ar regexp
 .Op Fl t Ar ftype | Fl -type Ar ftype
-.Op Fl -delete
-.Op Fl -empty
-.Op Fl -sort
+.Ar ...
 .Pp
 .Nm
 .Op Fl L | Fl P
@@ -28,9 +26,7 @@
 .Op Fl n Ar pattern | Fl -name Ar pattern
 .Op Fl r Ar regexp | Fl -regex Ar regexp
 .Op Fl t Ar ftype | Fl -type Ar ftype
-.Op Fl -delete
-.Op Fl -empty
-.Op Fl -sort
+.Ar ...
 .Sh DESCRIPTION
 The
 .Nm
@@ -114,6 +110,18 @@ Long options:
 delete files or directories.
 .It Fl -empty
 find empty files or directories.
+.It Fl -gid Ar gid
+find files belonging to
+.Ar gid .
+.It Fl -group Ar gname
+find files belonging to
+.Ar gname .
+.It Fl -uid Ar uid
+find files belonging to
+.Ar uid .
+.It Fl -user Ar uname
+find files belonging to
+.Ar uname .
 .It Fl -sort
 same as
 .Ic -s .

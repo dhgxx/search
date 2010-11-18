@@ -43,6 +43,7 @@
 #include <signal.h>
 #include <fnmatch.h>
 #include <locale.h>
+
 #include <dlist.h>
 
 #define SEARCH_NAME "search"
@@ -60,6 +61,8 @@ typedef enum _node_t {
 #ifndef _OpenBSD_
   NT_ISWHT = DT_WHT,
 #endif
+  NT_ISUSR = 18,
+  NT_ISGRP = 20,
   NT_ERROR = -1
 } node_t;
 
@@ -73,10 +76,18 @@ typedef struct _options_t {
   const char *prog_name;
   const char *prog_version;
   char path[MAXPATHLEN];
+  char user[LINE_MAX];
+  char uid[LINE_MAX];
+  char group[LINE_MAX];
+  char gid[LINE_MAX];
   node_t n_type;
   int re_icase;
   unsigned int find_path;
   unsigned int find_empty;
+  unsigned int find_gid;
+  unsigned int find_group;
+  unsigned int find_uid;
+  unsigned int find_user;
   unsigned int delete;
   unsigned int sort;
   int (*stat_func)(const char *, struct stat *);
@@ -86,6 +97,8 @@ typedef struct _options_t {
 typedef struct _node_stat_t {
   node_t type;
   unsigned int empty;
+  uid_t uid;
+  gid_t gid;
 } node_stat_t;
 
 reg_t *rep;

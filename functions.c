@@ -24,6 +24,9 @@
  *
  */
 
+#include <pwd.h>
+#include <grp.h>
+
 #include "search.h"
 
 static int opt_empty;
@@ -31,6 +34,10 @@ static int opt_delete;
 
 static int get_type(const char *);
 static int cook_entry(const char *, const char *);
+static gid_t get_gid(const char *);
+static uid_t get_uid(const char *);
+static int tell_grname(const char *, const gid_t);
+static int tell_pwname(const char *, const uid_t);
 
 void lookup_option(int, char **);
 void comp_regex(reg_t *);
@@ -47,10 +54,14 @@ lookup_option(int argc, char *argv[])
   int ch;
   
   static struct option longopts[] = {
+	{ "gid",     required_argument, NULL,        2  },
+	{ "group",   required_argument, NULL,        3  },
 	{ "path",    required_argument, NULL,       'f' },
 	{ "name",    required_argument, NULL,       'n' },
 	{ "regex",   required_argument, NULL,       'r' },
 	{ "type",    required_argument, NULL,       't' },
+	{ "user",    required_argument, NULL,        4  },
+	{ "uid",     required_argument, NULL,        5  },
 	{ "empty",   no_argument,       &opt_empty,  1  },
 	{ "delete",  no_argument,       &opt_delete, 1  },
 	{ "sort",    no_argument,       NULL,       's' },
@@ -60,6 +71,26 @@ lookup_option(int argc, char *argv[])
 
   while ((ch = getopt_long(argc, argv, "EILPsvf:n:r:t:", longopts, NULL)) != -1)
 	switch (ch) {
+	case 2:
+	  opts->find_gid = 1;
+	  bzero(opts->gid, LINE_MAX);
+	  strncpy(opts->gid, optarg, LINE_MAX);
+	  break;
+	case 3:
+	  opts->find_group = 1;
+	  bzero(opts->group, LINE_MAX);
+	  strncpy(opts->group, optarg, LINE_MAX);
+	  break;
+	case 4:
+	  opts->find_user = 1;
+	  bzero(opts->user, LINE_MAX);
+	  strncpy(opts->user, optarg, LINE_MAX);
+	  break;
+	case 5:
+	  opts->find_uid = 1;
+	  bzero(opts->uid, LINE_MAX);
+	  strncpy(opts->uid, optarg, LINE_MAX);
+	  break;
 	case 'f':
 	  opts->find_path = 1;
 	  bzero(opts->path, MAXPATHLEN);
@@ -427,7 +458,7 @@ display_version(void)
   exit (0);
 }
 
-static int
+static node_t
 get_type(const char *d_name)
 {
   struct stat stbuf;
@@ -436,7 +467,9 @@ get_type(const char *d_name)
 	return (NT_ERROR);
 
   node_stat->empty = 0;
-
+  node_stat->gid = stbuf.st_gid;
+  node_stat->uid = stbuf.st_uid;
+  
   if (S_ISBLK(stbuf.st_mode))
 	node_stat->type = NT_ISBLK;
   if (S_ISCHR(stbuf.st_mode))
@@ -479,25 +512,130 @@ get_type(const char *d_name)
 static int
 cook_entry(const char *n_name, const char *d_name)
 {
+  unsigned int found;
+
+  found = 0;
+  
   if ((opts->exec_func(d_name, rep) == 1) &&
 	  ((opts->n_type == NT_UNKNOWN) ||
 	   (opts->n_type == node_stat->type))) {
 
-	if (opts->find_empty == 1) {
-	  if (node_stat->empty == 1) {
-		if (opts->delete != 1)
-		  (void)fprintf(stdout, "%s\n", n_name);
-		return (1);
-	  }
-	  return (0);
-	}
+	found = 1;
 	
-	if (opts->delete != 1) {
-	  (void)fprintf(stdout, "%s\n", n_name);
+	if (opts->find_empty == 1) {
+	  if (node_stat->empty != 1)
+		found = 0;
 	}
 
-	return (1);
+	if (opts->find_gid == 1) {
+	  if (node_stat->gid != get_gid(opts->gid))
+		found = 0;
+	}
+	
+	if (opts->find_uid == 1) {
+	  if (node_stat->uid != get_uid(opts->uid))
+		found = 0;
+	}
+
+	if (opts->find_group == 1) {
+	  if (1 != tell_grname(opts->group, node_stat->gid))
+		found = 0;
+	}
+
+	if (opts->find_user == 1) {
+	  if (1 != tell_pwname(opts->user, node_stat->uid))
+		found = 0;
+	}
+
+	if (opts->delete != 1 && found == 1) {
+	  (void)fprintf(stdout, "%s\n", n_name);
+	}
+  }
+
+  return (found);
+}
+
+static gid_t
+get_gid(const char *sgid)
+{
+  gid_t id;
+  char *p;
+  
+  if (sgid == NULL)
+	return (-1);
+
+  id = strtol(sgid, &p, 0);
+  if (p[0] == '\0') {
+	return (id);
+  } else {
+	(void)fprintf(stderr, "%s: --gid: %s: no such group\n",
+				  opts->prog_name, p);
+	exit (0);
+  }
+  return (-1);
+}
+
+static uid_t
+get_uid(const char *suid)
+{
+  uid_t id;
+  char *p;
+  
+  id = strtol(suid, &p, 0);
+  if (p[0] == '\0') {
+	return (id);
+  } else {
+	(void)fprintf(stderr, "%s: --uid: %s: no such user\n",
+				  opts->prog_name, p);
+	exit (0);
+  }
+  return (-1);
+}
+
+static int
+tell_grname(const char *name, const gid_t id)
+{
+  char *p;
+  struct group *grp;
+
+  if (id < 0)
+	return (0);
+  
+  if (name == NULL)
+	return (0);
+  
+  if (opts->find_group == 1) {
+	if ((grp = getgrnam(name)) != NULL) {
+	  if (id == grp->gr_gid)
+		return (1);
+	} else {
+	  (void)fprintf(stderr, "%s: --group: %s: no such group\n",
+					opts->prog_name, name);
+	  exit (0);
+	}
   }
 
   return (0);
 }
+
+static int
+tell_pwname(const char *name, const uid_t id)
+{
+  char *p;
+  struct passwd *pw;
+  
+  if (opts->find_user == 1) {
+	if ((pw = getpwnam(name)) != NULL) {
+	  if (id == pw->pw_uid)
+		return (1);
+	} else {
+	  (void)fprintf(stderr, "%s: --user: %s: no such user\n",
+					opts->prog_name, name);
+	  exit (0);
+	}
+  }
+  
+  return (0);
+}
+	
+	
