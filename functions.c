@@ -30,10 +30,10 @@
 #include <getopt.h>
 #include <grp.h>
 
-static int opt_empty;
-static int opt_delete;
+static unsigned int opt_empty;
+static unsigned int opt_delete;
 
-static int get_type(const char *);
+static node_t get_type(const char *);
 static int cook_entry(const char *, const char *);
 static int tell_group(const char *, const gid_t);
 static int tell_user(const char *, const uid_t);
@@ -187,14 +187,14 @@ exec_name(const char *d_name, reg_t *rep)
 #endif
   matched = fnmatch(pattern, d_name, flag);
     
-  return ((matched == 0) ? 1 : 0);
+  return ((matched == 0) ? (0) : (-1));
 
 }
 
 void
 comp_regex(reg_t *rep)
 {
-  int retval, len, cflag;
+  int ret, len, cflag;
   regex_t *fmt;
   char msg[LINE_MAX];
   char *str;
@@ -209,10 +209,10 @@ comp_regex(reg_t *rep)
   if (len == 0)
 	str = ".*";		/* defaults to search all types. */
 
-  retval = regcomp(fmt, str, cflag);
+  ret = regcomp(fmt, str, cflag);
 
-  if (retval != 0) {
-	if (regerror(retval, fmt, msg, LINE_MAX) > 0) {
+  if (ret != 0) {
+	if (regerror(ret, fmt, msg, LINE_MAX) > 0) {
 	  (void)fprintf(stderr, "%s: %s: %s\n",
 					opts->prog_name, str, msg);
 	} else {
@@ -228,7 +228,7 @@ comp_regex(reg_t *rep)
 int
 exec_regex(const char *d_name, reg_t *rep)
 {
-  int retval, len, matched;
+  int ret, len, matched;
   regex_t *fmt;
   regmatch_t pmatch;
   char msg[LINE_MAX];
@@ -243,11 +243,11 @@ exec_regex(const char *d_name, reg_t *rep)
   pmatch.rm_eo = len;
   matched = 0;
 
-  retval = regexec(fmt, d_name, 1, &pmatch, REG_STARTEND);
+  ret = regexec(fmt, d_name, 1, &pmatch, REG_STARTEND);
 
-  if (retval != 0 && retval != REG_NOMATCH) {
+  if (ret != 0 && ret != REG_NOMATCH) {
 	
-	if (regerror(retval, fmt, msg, LINE_MAX) > 0) {
+	if (regerror(ret, fmt, msg, LINE_MAX) > 0) {
 	  (void)fprintf(stderr, "%s: %s: %s\n",
 					opts->prog_name, str, msg);
 	} else {
@@ -258,8 +258,8 @@ exec_regex(const char *d_name, reg_t *rep)
 	exit(0);
   }
 
-  matched = retval == 0 && pmatch.rm_so == 0 && pmatch.rm_eo == len;
-  return ((matched) ? 1 : 0);
+  matched = ((ret == 0) && (pmatch.rm_so == 0) && (pmatch.rm_eo == len));
+  return ((matched == 1) ? (0) : (-1));
 }
 
 void
@@ -274,7 +274,6 @@ free_regex(reg_t *rep)
 void
 walk_through(const char *n_name, const char *d_name)
 {
-  int found;
   char tmp_buf[MAXPATHLEN];
   struct dirent *dir;
   DIR *dirp;
@@ -292,10 +291,8 @@ walk_through(const char *n_name, const char *d_name)
 	frem = dl_init();
 	drem = dl_init();
   }
-
-  found = cook_entry(n_name, d_name);
   
-  if (found == 1) {
+  if (0 == cook_entry(n_name, d_name)) {
 	if (opts->delete == 1) {
 	  if (node_stat->type != NT_ISDIR) {
 #ifdef _DEBUG
@@ -303,8 +300,8 @@ walk_through(const char *n_name, const char *d_name)
 #endif
 		dl_append(n_name, frem);
 	  } else {
-		if ((strncmp(n_name, ".", 2) != 0) &&
-			(strncmp(n_name, "..", 3) != 0)) {
+		if ((0 != strncmp(n_name, ".", 2)) &&
+			(0 != strncmp(n_name, "..", 3))) {
 #ifdef _DEBUG_
 		  fprintf(stderr, "delete: %s\n", n_name);
 #endif
@@ -316,16 +313,16 @@ walk_through(const char *n_name, const char *d_name)
 
   if (node_stat->type == NT_ISDIR) {
 	
-	if ( (dirp = opendir(n_name)) == NULL) {
+	if (NULL == (dirp = opendir(n_name))) {
 	  (void)fprintf(stderr,
 					"%s: %s: %s\n",
 					opts->prog_name, n_name, strerror(errno));
 	  return;
 	}
 	
-	while ( (dir = readdir(dirp)) != NULL) {
-	  if ((strncmp(dir->d_name, ".", 2) != 0) &&
-		  (strncmp(dir->d_name, "..", 3) != 0)) {
+	while (NULL != (dir = readdir(dirp))) {
+	  if ((0 != strncmp(dir->d_name, ".", 2)) &&
+		  (0 != strncmp(dir->d_name, "..", 3))) {
 		dl_append(dir->d_name, slist);
 	  }
 	}
@@ -337,7 +334,7 @@ walk_through(const char *n_name, const char *d_name)
 	while (slist->cur != NULL) {
 	  bzero(tmp_buf, MAXPATHLEN);
 	  strncpy(tmp_buf, n_name, MAXPATHLEN);
-	  if (tmp_buf[strlen(tmp_buf) - 1] != '/')
+	  if ('/' != tmp_buf[strlen(tmp_buf) - 1])
 		strncat(tmp_buf, "/", MAXPATHLEN);
 	  strncat(tmp_buf, slist->cur->node, MAXPATHLEN);
 	  walk_through(tmp_buf, slist->cur->node);
@@ -476,7 +473,7 @@ cook_entry(const char *n_name, const char *d_name)
 
   found = 0;
   
-  if ((opts->exec_func(d_name, rep) == 1) &&
+  if ((0 == opts->exec_func(d_name, rep)) &&
 	  ((opts->n_type == NT_UNKNOWN) ||
 	   (opts->n_type == node_stat->type))) {
 
@@ -488,12 +485,12 @@ cook_entry(const char *n_name, const char *d_name)
 	}
 
 	if (opts->find_group == 1) {
-	  if (1 != tell_group(opts->group, node_stat->gid))
+	  if (0 != tell_group(opts->group, node_stat->gid))
 		found = 0;
 	}
 	
 	if (opts->find_user == 1) {
-	  if (1 != tell_user(opts->user, node_stat->uid))
+	  if (0 != tell_user(opts->user, node_stat->uid))
 		found = 0;
 	}
 
@@ -502,7 +499,7 @@ cook_entry(const char *n_name, const char *d_name)
 	}
   }
 
-  return (found);
+  return (found == 1 ? (0) : (-1));
 }
 
 static int
@@ -513,10 +510,10 @@ tell_group(const char *sgid, const gid_t gid)
   struct group *grp;
   
   if (sgid == NULL)
-	return (0);
+	return (-1);
 
   if (gid < 0)
-	return (0);
+	return (-1);
 
   id = strtol(sgid, &p, 0);
   if (p[0] == '\0')
@@ -531,9 +528,9 @@ tell_group(const char *sgid, const gid_t gid)
   }
 
   if (grp->gr_gid == gid)
-	return (1);
+	return (0);
   
-  return (0);
+  return (-1);
 }
 
 static int
@@ -544,10 +541,10 @@ tell_user(const char *suid, const uid_t uid)
   struct passwd *pwd;
 
   if (suid == NULL)
-	return (0);
+	return (-1);
 
   if (uid < 0)
-	return (0);
+	return (-1);
   
   id = strtol(suid, &p, 0);
   if (p[0] == '\0')
@@ -562,7 +559,7 @@ tell_user(const char *suid, const uid_t uid)
   }
 
   if (pwd->pw_uid == uid)
-	return (1);
+	return (0);
   
-  return (0);
+  return (-1);
 }

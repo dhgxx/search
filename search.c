@@ -48,10 +48,8 @@ main(int argc, char *argv[])
   if (rep == NULL ||
 	  opts == NULL ||
 	  node_stat == NULL) {
-	(void)fprintf(stderr,
-				  "%s: malloc(3): %s.\n",
-				  SEARCH_NAME,
-				  strerror(errno));
+	(void)fprintf(stderr, "%s: malloc(3): %s.\n",
+				  SEARCH_NAME, strerror(errno));
 	exit(0);
   }
 
