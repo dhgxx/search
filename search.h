@@ -37,7 +37,6 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <unistd.h>
-#include <getopt.h>
 #include <limits.h>
 #include <regex.h>
 #include <signal.h>
@@ -77,9 +76,7 @@ typedef struct _options_t {
   const char *prog_version;
   char path[MAXPATHLEN];
   char user[LINE_MAX];
-  char uid[LINE_MAX];
   char group[LINE_MAX];
-  char gid[LINE_MAX];
   node_t n_type;
   int re_icase;
   unsigned int find_path;

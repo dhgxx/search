@@ -24,20 +24,19 @@
  *
  */
 
-#include <pwd.h>
-#include <grp.h>
-
 #include "search.h"
+
+#include <pwd.h>
+#include <getopt.h>
+#include <grp.h>
 
 static int opt_empty;
 static int opt_delete;
 
 static int get_type(const char *);
 static int cook_entry(const char *, const char *);
-static gid_t get_gid(const char *);
-static uid_t get_uid(const char *);
-static int tell_grname(const char *, const gid_t);
-static int tell_pwname(const char *, const uid_t);
+static int tell_group(const char *, const gid_t);
+static int tell_user(const char *, const uid_t);
 
 void lookup_option(int, char **);
 void comp_regex(reg_t *);
@@ -72,24 +71,16 @@ lookup_option(int argc, char *argv[])
   while ((ch = getopt_long(argc, argv, "EILPsvf:n:r:t:", longopts, NULL)) != -1)
 	switch (ch) {
 	case 2:
-	  opts->find_gid = 1;
-	  bzero(opts->gid, LINE_MAX);
-	  strncpy(opts->gid, optarg, LINE_MAX);
-	  break;
 	case 3:
 	  opts->find_group = 1;
 	  bzero(opts->group, LINE_MAX);
 	  strncpy(opts->group, optarg, LINE_MAX);
 	  break;
 	case 4:
+	case 5:
 	  opts->find_user = 1;
 	  bzero(opts->user, LINE_MAX);
 	  strncpy(opts->user, optarg, LINE_MAX);
-	  break;
-	case 5:
-	  opts->find_uid = 1;
-	  bzero(opts->uid, LINE_MAX);
-	  strncpy(opts->uid, optarg, LINE_MAX);
 	  break;
 	case 'f':
 	  opts->find_path = 1;
@@ -191,10 +182,8 @@ exec_name(const char *d_name, reg_t *rep)
   }
   
 #ifdef _DEBUG_
-  (void)fprintf(stderr,
-				"pattern=%s, name=%s\n",
-				pattern,
-				d_name);
+  (void)fprintf(stderr,	"pattern=%s, name=%s\n",
+				pattern, d_name);
 #endif
   matched = fnmatch(pattern, d_name, flag);
     
@@ -224,17 +213,11 @@ comp_regex(reg_t *rep)
 
   if (retval != 0) {
 	if (regerror(retval, fmt, msg, LINE_MAX) > 0) {
-	  (void)fprintf(stderr,
-					"%s: %s: %s\n",
-					opts->prog_name,
-					str,
-					msg);
+	  (void)fprintf(stderr, "%s: %s: %s\n",
+					opts->prog_name, str, msg);
 	} else {
-	  (void)fprintf(stderr,
-					"%s: %s: %s\n",
-					opts->prog_name,
-					str,
-					strerror(errno));
+	  (void)fprintf(stderr, "%s: %s: %s\n",
+					opts->prog_name, str, strerror(errno));
 	}
 	regfree(fmt);
 	exit(0);
@@ -265,17 +248,11 @@ exec_regex(const char *d_name, reg_t *rep)
   if (retval != 0 && retval != REG_NOMATCH) {
 	
 	if (regerror(retval, fmt, msg, LINE_MAX) > 0) {
-	  (void)fprintf(stderr,
-					"%s: %s: %s\n",
-					opts->prog_name,
-					str,
-					msg);
+	  (void)fprintf(stderr, "%s: %s: %s\n",
+					opts->prog_name, str, msg);
 	} else {
-	  (void)fprintf(stderr,
-					"%s: %s: %s\n",
-					opts->prog_name,
-					str,
-					strerror(errno));
+	  (void)fprintf(stderr, "%s: %s: %s\n",
+					opts->prog_name, str, strerror(errno));
 	}
 	regfree(fmt);
 	exit(0);
@@ -305,11 +282,8 @@ walk_through(const char *n_name, const char *d_name)
   DLIST *frem, *drem;
   
   if (get_type(n_name) == NT_ERROR) {
-	(void)fprintf(stderr,
-				  "%s: %s: %s\n",
-				  opts->prog_name,
-				  n_name,
-				  strerror(errno));
+	(void)fprintf(stderr, "%s: %s: %s\n",
+				  opts->prog_name, n_name, strerror(errno));
 	return;
   }
 
@@ -345,9 +319,7 @@ walk_through(const char *n_name, const char *d_name)
 	if ( (dirp = opendir(n_name)) == NULL) {
 	  (void)fprintf(stderr,
 					"%s: %s: %s\n",
-					opts->prog_name,
-					n_name,
-					strerror(errno));
+					opts->prog_name, n_name, strerror(errno));
 	  return;
 	}
 	
@@ -379,11 +351,8 @@ walk_through(const char *n_name, const char *d_name)
 	  frem->cur = frem->head;
 	  while (frem->cur != NULL) {
 		if (unlink(frem->cur->node) < 0)
-		  (void)fprintf(stderr,
-						"%s: --delete: unlink(%s): %s\n",
-						opts->prog_name,
-						frem->cur->node,
-						strerror(errno));
+		  (void)fprintf(stderr,	"%s: --delete: unlink(%s): %s\n",
+						opts->prog_name, frem->cur->node, strerror(errno));
 		frem->cur = frem->cur->next;
 	  }
 	}
@@ -392,11 +361,8 @@ walk_through(const char *n_name, const char *d_name)
 	  drem->cur = drem->head;
 	  while (drem->cur != NULL) {
 		if (rmdir(drem->cur->node) < 0)
-		  (void)fprintf(stderr,
-						"%s: --delete: rmdir(%s): %s\n",
-						opts->prog_name,
-						drem->cur->node,
-						strerror(errno));
+		  (void)fprintf(stderr, "%s: --delete: rmdir(%s): %s\n",
+						opts->prog_name, drem->cur->node, strerror(errno));
 		drem->cur = drem->cur->next;
 	  }
 	}
@@ -439,20 +405,16 @@ display_usage(void)
  [-t|--type ...]\
  [...]\n";
 
-  (void)fprintf(stderr,
-				usage,
-				opts->prog_name,
-				opts->prog_name);
+  (void)fprintf(stderr,	usage,
+				opts->prog_name, opts->prog_name);
   exit (0);
 }
 
 void
 display_version(void)
 {  
-  (void)fprintf(stderr,
-				"%s version %s\n",
-				opts->prog_name,
-				opts->prog_version);
+  (void)fprintf(stderr,	"%s version %s\n",
+				opts->prog_name, opts->prog_version);
   exit (0);
 }
 
@@ -525,23 +487,13 @@ cook_entry(const char *n_name, const char *d_name)
 		found = 0;
 	}
 
-	if (opts->find_gid == 1) {
-	  if (node_stat->gid != get_gid(opts->gid))
+	if (opts->find_group == 1) {
+	  if (1 != tell_group(opts->group, node_stat->gid))
 		found = 0;
 	}
 	
-	if (opts->find_uid == 1) {
-	  if (node_stat->uid != get_uid(opts->uid))
-		found = 0;
-	}
-
-	if (opts->find_group == 1) {
-	  if (1 != tell_grname(opts->group, node_stat->gid))
-		found = 0;
-	}
-
 	if (opts->find_user == 1) {
-	  if (1 != tell_pwname(opts->user, node_stat->uid))
+	  if (1 != tell_user(opts->user, node_stat->uid))
 		found = 0;
 	}
 
@@ -553,87 +505,65 @@ cook_entry(const char *n_name, const char *d_name)
   return (found);
 }
 
-static gid_t
-get_gid(const char *sgid)
+static int
+tell_group(const char *sgid, const gid_t gid)
 {
   gid_t id;
   char *p;
+  char *opt;
+  struct group *grp;
   
   if (sgid == NULL)
-	return (-1);
+	return (0);
+
+  if (gid < 0)
+	return (0);
 
   id = strtol(sgid, &p, 0);
-  if (p[0] == '\0') {
-	return (id);
-  } else {
-	(void)fprintf(stderr, "%s: --gid: %s: no such group\n",
-				  opts->prog_name, p);
+  if (p[0] == '\0')
+	grp = getgrgid(id);
+  else
+	grp = getgrnam(p);
+  
+  if (grp == NULL) {
+	(void)fprintf(stderr, "%s: --group: %s: no such group\n",
+				  opts->prog_name, sgid);
 	exit (0);
   }
-  return (-1);
+
+  if (grp->gr_gid == gid)
+	return (1);
+  
+  return (0);
 }
 
-static uid_t
-get_uid(const char *suid)
+static int
+tell_user(const char *suid, const uid_t uid)
 {
   uid_t id;
   char *p;
+  struct passwd *pwd;
+
+  if (suid == NULL)
+	return (0);
+
+  if (uid < 0)
+	return (0);
   
   id = strtol(suid, &p, 0);
-  if (p[0] == '\0') {
-	return (id);
-  } else {
-	(void)fprintf(stderr, "%s: --uid: %s: no such user\n",
-				  opts->prog_name, p);
+  if (p[0] == '\0')
+	pwd = getpwuid(id);
+  else
+	pwd = getpwnam(p);
+  
+  if (pwd == NULL) {
+	(void)fprintf(stderr, "%s: --user: %s: no such user\n",
+				  opts->prog_name, suid);
 	exit (0);
   }
-  return (-1);
-}
 
-static int
-tell_grname(const char *name, const gid_t id)
-{
-  char *p;
-  struct group *grp;
-
-  if (id < 0)
-	return (0);
-  
-  if (name == NULL)
-	return (0);
-  
-  if (opts->find_group == 1) {
-	if ((grp = getgrnam(name)) != NULL) {
-	  if (id == grp->gr_gid)
-		return (1);
-	} else {
-	  (void)fprintf(stderr, "%s: --group: %s: no such group\n",
-					opts->prog_name, name);
-	  exit (0);
-	}
-  }
-
-  return (0);
-}
-
-static int
-tell_pwname(const char *name, const uid_t id)
-{
-  char *p;
-  struct passwd *pw;
-  
-  if (opts->find_user == 1) {
-	if ((pw = getpwnam(name)) != NULL) {
-	  if (id == pw->pw_uid)
-		return (1);
-	} else {
-	  (void)fprintf(stderr, "%s: --user: %s: no such user\n",
-					opts->prog_name, name);
-	  exit (0);
-	}
-  }
+  if (pwd->pw_uid == uid)
+	return (1);
   
   return (0);
 }
-	
-	
