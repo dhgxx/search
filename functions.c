@@ -29,6 +29,7 @@
 #include <pwd.h>
 #include <getopt.h>
 #include <grp.h>
+#include <dlist.h>
 
 static unsigned int opt_empty;
 static unsigned int opt_delete;
