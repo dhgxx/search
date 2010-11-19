@@ -10,22 +10,20 @@
 .Op Fl L | Fl P
 .Op Fl EIsv
 .Ar path ...
-.Op Fl f Ar path | Fl -path Ar path
-.Op Fl n Ar pattern | Fl -name Ar pattern
-.Op Fl r Ar regexp | Fl -regex Ar regexp
-.Op Fl t Ar ftype | Fl -type Ar ftype
+.Op Fl f Ar path
+.Op Fl n Ar pattern
+.Op Fl r Ar regexp
+.Op Fl t Ar ftype
 .Op ...
 .Pp
 .Nm
 .Op Fl L | Fl P
 .Op Fl EIsv
 .Fl f Ar path
-|
-.Fl -path Ar path
 .Op path ...
-.Op Fl n Ar pattern | Fl -name Ar pattern
-.Op Fl r Ar regexp | Fl -regex Ar regexp
-.Op Fl t Ar ftype | Fl -type Ar ftype
+.Op Fl n Ar pattern
+.Op Fl r Ar regexp
+.Op Fl t Ar ftype
 .Op ...
 .Sh DESCRIPTION
 The
@@ -110,21 +108,21 @@ Long options:
 delete files or directories.
 .It Fl -empty
 find empty files or directories.
-.It Fl -gid Ar gid
-find files belonging to
-.Ar gid .
-.It Fl -group Ar gname
-find files belonging to
-.Ar gname .
-.It Fl -uid Ar uid
-find files belonging to
-.Ar uid .
-.It Fl -user Ar uname
-find files belonging to
-.Ar uname .
 .It Fl -sort
 same as
 .Ic -s .
+.It Fl -gid Ar gname
+same as
+.Ic Fl -group Ar gname .
+.It Fl -group Ar gname
+find files belonging to
+.Ar gname .
+.It Fl -uid Ar uname
+same as
+.Ic Fl -user Ar uname .
+.It Fl -user Ar uname
+find files belonging to
+.Ar uname .
 .It Fl -name Ar pattern
 same as
 .Ic -n Ar pattern .
