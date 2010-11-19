@@ -510,7 +510,6 @@ tell_group(const char *sgid, const gid_t gid)
 {
   gid_t id;
   char *p;
-  char *opt;
   struct group *grp;
   
   if (sgid == NULL)
