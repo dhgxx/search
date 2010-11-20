@@ -9,28 +9,22 @@
 .Nm
 .Op Fl L | Fl P
 .Op Fl EIsv
-.Op Fl f Ar path | Fl -path Ar path
 .Ar path ...
-.Op Fl n Ar pattern | Fl -name Ar pattern
-.Op Fl r Ar regexp | Fl -regex Ar regexp
-.Op Fl t Ar ftype | Fl -type Ar ftype
-.Op Fl -delete
-.Op Fl -empty
-.Op Fl -sort
+.Op Fl f Ar path
+.Op Fl n Ar pattern
+.Op Fl r Ar regexp
+.Op Fl t Ar ftype
+.Op ...
 .Pp
 .Nm
 .Op Fl L | Fl P
 .Op Fl EIsv
 .Fl f Ar path
-|
-.Fl -path Ar path
 .Op path ...
-.Op Fl n Ar pattern | Fl -name Ar pattern
-.Op Fl r Ar regexp | Fl -regex Ar regexp
-.Op Fl t Ar ftype | Fl -type Ar ftype
-.Op Fl -delete
-.Op Fl -empty
-.Op Fl -sort
+.Op Fl n Ar pattern
+.Op Fl r Ar regexp
+.Op Fl t Ar ftype
+.Op ...
 .Sh DESCRIPTION
 The
 .Nm
@@ -62,8 +56,6 @@ has identical output as
 .Ql search | sort .
 .It Fl v
 show version number
-.It Fl h
-this long help.
 .It Fl n Ar pattern
 specify a
 .Ar pattern
@@ -117,6 +109,18 @@ find empty files or directories.
 .It Fl -sort
 same as
 .Ic -s .
+.It Fl -gid Ar gname
+same as
+.Ic Fl -group Ar gname .
+.It Fl -group Ar gname
+find files belonging to
+.Ar gname .
+.It Fl -uid Ar uname
+same as
+.Ic Fl -user Ar uname .
+.It Fl -user Ar uname
+find files belonging to
+.Ar uname .
 .It Fl -name Ar pattern
 same as
 .Ic -n Ar pattern .
