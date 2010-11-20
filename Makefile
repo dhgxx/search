@@ -9,19 +9,16 @@ OSNAME!=		uname -s
 INSTALL_USER!=		id -n -u
 OPT_DESTDIR=		/opt/local
 OPT_BINDIR=		${OPT_DESTDIR}/bin
-OPT_INCDIR=		${OPT_DESTDIR}/include
 OPT_LIBDIR=		${OPT_DESTDIR}/lib
 OPT_MANDIR=		${OPT_DESTDIR}/man
 
 CC=			cc
-OPT_INC=		-I${OPT_INCDIR}
-OPT_LIB=		-L${OPT_LIBDIR} -lmi
 
 PROG=			search
 MAN=			${PROG}.1
-SRCS=			functions.c search.c
-HDRS=			search.h
-OBJS=			functions.o search.o
+SRCS=			dlist.c functions.c search.c
+HDRS=			dlist.h search.h
+OBJS=			dlist.o functions.o search.o
 
 .if defined(CFLAGS)
 MYCFLAGS=		${CFLAGS} -D_${OSNAME}_
@@ -62,11 +59,11 @@ sys-install: install-bin install-man
 
 ${OBJS}: ${SRCS} ${HDRS}
 .for i in ${SRCS}
-	${CC} ${MYCFLAGS} ${OPT_INC} -c $i
+	${CC} ${MYCFLAGS} -c $i
 .endfor
 
 ${PROG}: ${SRCS} ${HDRS}
-	${CC} ${MYCFLAGS} ${OPT_LIB} -o ${PROG} ${OBJS}
+	${CC} ${MYCFLAGS} -o ${PROG} ${OBJS}
 
 makeman:
 .if ${OSNAME} == "OpenBSD"
