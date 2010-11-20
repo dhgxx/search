@@ -368,17 +368,17 @@ walk_through(const char *n_name, const char *d_name)
 
   if (opts->delete == 1) {
 	if (frem != NULL) {
-	  dl_free(frem);
+	  dl_free(&frem);
 	  frem = NULL;
 	}
 	if (drem != NULL) {
-	  dl_free(drem);
+	  dl_free(&drem);
 	  drem = NULL;
 	}
   }
   
   if (slist != NULL) {
-	dl_free(slist);
+	dl_free(&slist);
 	slist = NULL;
   }
   

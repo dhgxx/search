@@ -353,32 +353,34 @@ dl_proc(DLIST *dl, void (*func_p) (const dl_node *np))
 }
 
 void
-dl_free(DLIST *dl)
+dl_free(DLIST **dl)
 {
   dl_node *np;
-  
-  if (dl == NULL)
+  DLIST *dlp;
+
+  dlp = *dl;
+  if (dlp == NULL)
 	return;
 
-  if (dl_empty(dl)) {
-	free(dl);
-	dl = NULL;
+  if (dl_empty(dlp)) {
+	free(dlp);
+	dlp = NULL;
 	return;
   }
 	  
-  np = dl->tail;
-  dl->cur = dl->tail->pre;
+  np = dlp->tail;
+  dlp->cur = dlp->tail->pre;
   
   while (np != NULL) {
 	free(np);
 	np = NULL;
-	np = dl->cur;
-	if (dl->cur != NULL)
-	  dl->cur = dl->cur->pre;
+	np = dlp->cur;
+	if (dlp->cur != NULL)
+	  dlp->cur = dlp->cur->pre;
   }
 
-  if (dl != NULL) {
-	free(dl);
-	dl = NULL;
+  if (dlp != NULL) {
+	free(dlp);
+	dlp = NULL;
   }
 }
