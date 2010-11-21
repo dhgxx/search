@@ -28,6 +28,8 @@
 #include "extern.h"
 
 static void cleanup(int);
+static void deldir(DLIST *);
+static void dislink(DLIST *);
 
 int
 main(int argc, char *argv[])
@@ -37,6 +39,7 @@ main(int argc, char *argv[])
   extern int optind;
   
   int i;
+  struct stat *stbuf;
   
   (void)setlocale(LC_CTYPE, "");
   signal(SIGINT, cleanup);
@@ -75,6 +78,11 @@ main(int argc, char *argv[])
   
   argc -= optind;
   argv += optind;
+
+  if (opts->delete == 1) {
+	drm = dl_init();
+	frm = dl_init();
+  }
   
   if (argc == 0 &&
 	  opts->find_path == 0)
@@ -85,20 +93,36 @@ main(int argc, char *argv[])
   
   comp_regex(rep);
 
-  if (opts->find_path == 1)
+  if (opts->find_path == 1) {
 	walk_through(opts->path, opts->path);
+  }
 
   if (argc > 0) {
 	for (i = 0; i < argc && argv[i]; i++)
 	  walk_through(argv[i], argv[i]);
   }
-  
+
+  if (!dl_empty(frm)) {
+	dislink(frm);
+  }
+  if (!dl_empty(drm)) {
+	deldir(drm);
+  }
+
+  if (opts->delete == 1) {
+	dl_free(&drm);
+	drm = NULL;
+	dl_free(&frm);
+	frm = NULL;
+  }
+
   free_regex(rep);
   rep = NULL;
   free(opts);
   opts = NULL;
   free(node_stat);
   node_stat = NULL;
+
   exit(0);
 }
 
@@ -129,3 +153,36 @@ cleanup(int sig)
 	exit(1);
 }
 
+static void
+deldir(DLIST *dp)
+{  
+  if (dp == NULL)
+	return;
+  if (dl_empty(dp))
+	return;
+
+  dp->cur = dp->head;
+  while (dp->cur != NULL) {
+	if (rmdir(dp->cur->node) < 0)
+	  (void)fprintf(stderr, "%s: --rmdir(%s): %s\n",
+					opts->prog_name, dp->cur->node, strerror(errno));
+	dp->cur = dp->cur->next;
+  }
+}
+
+static void
+dislink(DLIST *dp)
+{
+  if (dp == NULL)
+	return;
+  if (dl_empty(dp))
+	return;
+
+  dp->cur = dp->head;
+  while (dp->cur != NULL) {
+	if (unlink(dp->cur->node) < 0)
+	  (void)fprintf(stderr, "%s: --unlink(%s): %s\n",
+					opts->prog_name, dp->cur->node, strerror(errno));
+	dp->cur = dp->cur->next;
+  }
+}
