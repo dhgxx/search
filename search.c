@@ -37,6 +37,7 @@ main(int argc, char *argv[])
   extern int optind;
   
   int i;
+  struct stat *stbuf;
   
   (void)setlocale(LC_CTYPE, "");
   signal(SIGINT, cleanup);
@@ -64,7 +65,9 @@ main(int argc, char *argv[])
   opts->find_user = 0;
   opts->delete = 0;
   opts->sort = 0;
-
+  opts->x_dev = 0;
+  opts->odev = 0;
+  
   bzero(opts->path, MAXPATHLEN);
   bzero(rep->re_str, LINE_MAX);
   rep->re_cflag =  REG_BASIC;
@@ -83,8 +86,9 @@ main(int argc, char *argv[])
   
   comp_regex(rep);
 
-  if (opts->find_path == 1)
+  if (opts->find_path == 1) {
 	walk_through(opts->path, opts->path);
+  }
 
   if (argc > 0) {
 	for (i = 0; i < argc && argv[i]; i++)
@@ -126,4 +130,3 @@ cleanup(int sig)
   if (sig)
 	exit(1);
 }
-
