@@ -31,9 +31,6 @@
 #include <grp.h>
 #include <dlist.h>
 
-static unsigned int opt_empty;
-static unsigned int opt_delete;
-
 static node_t get_type(const char *);
 static int cook_entry(const char *, const char *);
 static int tell_group(const char *, const gid_t);
@@ -52,6 +49,9 @@ void
 lookup_option(int argc, char *argv[])
 {
   int ch;
+  static unsigned int opt_empty;
+  static unsigned int opt_delete;
+  static unsigned int opt_xdev;
   
   static struct option longopts[] = {
 	{ "gid",     required_argument, NULL,        2  },
@@ -64,6 +64,7 @@ lookup_option(int argc, char *argv[])
 	{ "uid",     required_argument, NULL,        5  },
 	{ "empty",   no_argument,       &opt_empty,  1  },
 	{ "delete",  no_argument,       &opt_delete, 1  },
+	{ "xdev",    no_argument,       &opt_xdev,   1  },
 	{ "sort",    no_argument,       NULL,       's' },
 	{ "version", no_argument,       NULL,       'v' },
 	{ NULL,      0,                 NULL,        0  }
@@ -103,6 +104,8 @@ lookup_option(int argc, char *argv[])
 		opts->find_empty = 1;
 	  if (opt_delete == 1)
 		opts->delete = 1;
+	  if (opt_xdev == 1)
+		opts->x_dev = 1;
 	  break;
 	case 's':
 	  opts->sort = 1;
@@ -292,6 +295,11 @@ walk_through(const char *n_name, const char *d_name)
 	frem = dl_init();
 	drem = dl_init();
   }
+
+  if (opts->x_dev == 1) {
+	if (opts->odev == 0)
+	  opts->odev = node_stat->dev;
+  }
   
   if (0 == cook_entry(n_name, d_name)) {
 	if (opts->delete == 1) {
@@ -312,6 +320,10 @@ walk_through(const char *n_name, const char *d_name)
 	}
   }
 
+  if (opts->x_dev == 1)
+	if (node_stat->dev != opts->odev)
+	  return;
+  
   if (node_stat->type == NT_ISDIR) {
 	
 	if (NULL == (dirp = opendir(n_name))) {
@@ -427,7 +439,8 @@ get_type(const char *d_name)
   node_stat->empty = 0;
   node_stat->gid = stbuf.st_gid;
   node_stat->uid = stbuf.st_uid;
-  
+  node_stat->dev = stbuf.st_dev;
+
   if (S_ISBLK(stbuf.st_mode))
 	node_stat->type = NT_ISBLK;
   if (S_ISCHR(stbuf.st_mode))
@@ -494,7 +507,7 @@ cook_entry(const char *n_name, const char *d_name)
 	  if (0 != tell_user(opts->user, node_stat->uid))
 		found = 0;
 	}
-
+	
 	if (opts->delete != 1 && found == 1) {
 	  (void)fprintf(stdout, "%s\n", n_name);
 	}
