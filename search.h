@@ -42,6 +42,7 @@
 #include <signal.h>
 #include <fnmatch.h>
 #include <locale.h>
+#include <dlist.h>
 
 #define SEARCH_NAME "search"
 #define SEARCH_VERSION "0.4"
@@ -110,5 +111,6 @@ typedef struct _node_stat_t {
 reg_t *rep;
 options_t *opts;
 node_stat_t *node_stat;
+DLIST *drm, *frm;
 
 #endif	/* _SEARCH_H_ */

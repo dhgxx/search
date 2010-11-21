@@ -29,7 +29,6 @@
 #include <pwd.h>
 #include <getopt.h>
 #include <grp.h>
-#include <dlist.h>
 
 static node_t get_type(const char *);
 static int cook_entry(const char *, const char *);
@@ -278,6 +277,7 @@ free_regex(reg_t *rep)
 void
 walk_through(const char *n_name, const char *d_name)
 {
+  int ret, nent;
   char tmp_buf[MAXPATHLEN];
   struct dirent *dir;
   DIR *dirp;
@@ -290,60 +290,55 @@ walk_through(const char *n_name, const char *d_name)
 	return;
   }
 
+  nent = 0;
   slist = dl_init();
-  if (opts->delete == 1) {
-	frem = dl_init();
-	drem = dl_init();
-  }
 
   if (opts->x_dev == 1) {
 	if (opts->odev == 0)
 	  opts->odev = node_stat->dev;
   }
-  
-  if (0 == cook_entry(n_name, d_name)) {
-	if (opts->delete == 1) {
-	  if (node_stat->type != NT_ISDIR) {
-#ifdef _DEBUG
-		fprintf(stderr, "delete: %s\n", n_name);
-#endif
-		dl_append(n_name, frem);
-	  } else {
-		if ((0 != strncmp(n_name, ".", 2)) &&
-			(0 != strncmp(n_name, "..", 3)) &&
-			(node_stat->empty == 1)) {
-#ifdef _DEBUG_
-		  fprintf(stderr, "delete: %s\n", n_name);
-#endif
-		  dl_append(n_name, drem);
-		}
-	  }
-	}
-  }
 
+  ret = cook_entry(n_name, d_name);
+  
   if (opts->x_dev == 1)
 	if (node_stat->dev != opts->odev)
 	  return;
   
+  if (opts->delete == 1)
+	if (ret == 0 && node_stat->type != NT_ISDIR)
+	  dl_append(n_name, frm);
+  
   if (node_stat->type == NT_ISDIR) {
-	
+
 	if (NULL == (dirp = opendir(n_name))) {
 	  (void)fprintf(stderr,
 					"%s: %s: %s\n",
 					opts->prog_name, n_name, strerror(errno));
 	  return;
 	}
-	
+
 	while (NULL != (dir = readdir(dirp))) {
 	  if ((0 != strncmp(dir->d_name, ".", 2)) &&
 		  (0 != strncmp(dir->d_name, "..", 3))) {
+		nent++;
 		dl_append(dir->d_name, slist);
 	  }
 	}
-
+	
 	if (opts->sort == 1)
 	  dl_sort(slist);
 
+	if (opts->delete == 1) {
+	  if (0 != strncmp(n_name, ".", 2) &&
+		  0 != strncmp(n_name, "..", 3)) {
+		if (opts->find_empty == 1) {
+		  if (nent == 0)
+			dl_append(n_name, drm);
+		} else if (ret == 0)
+		  dl_append(n_name, drm);
+	  }
+	}
+	
 	slist->cur = slist->head;
 	while (slist->cur != NULL) {
 	  bzero(tmp_buf, MAXPATHLEN);
@@ -354,40 +349,8 @@ walk_through(const char *n_name, const char *d_name)
 	  walk_through(tmp_buf, slist->cur->node);
 	  slist->cur = slist->cur->next;
 	}
+	
 	closedir(dirp);
-  }
-
-  if (opts->delete == 1) {
-	if (frem != NULL) {
-	  frem->cur = frem->head;
-	  while (frem->cur != NULL) {
-		if (unlink(frem->cur->node) < 0)
-		  (void)fprintf(stderr,	"%s: --delete: unlink(%s): %s\n",
-						opts->prog_name, frem->cur->node, strerror(errno));
-		frem->cur = frem->cur->next;
-	  }
-	}
-	  
-	if (drem != NULL) {
-	  drem->cur = drem->head;
-	  while (drem->cur != NULL) {
-		if (rmdir(drem->cur->node) < 0)
-		  (void)fprintf(stderr, "%s: --delete: rmdir(%s): %s\n",
-						opts->prog_name, drem->cur->node, strerror(errno));
-		drem->cur = drem->cur->next;
-	  }
-	}
-  }
-
-  if (opts->delete == 1) {
-	if (frem != NULL) {
-	  dl_free(&frem);
-	  frem = NULL;
-	}
-	if (drem != NULL) {
-	  dl_free(&drem);
-	  drem = NULL;
-	}
   }
   
   if (slist != NULL) {
@@ -460,16 +423,7 @@ get_type(const char *d_name)
   if (S_ISWHT(stbuf.st_mode))
 	node_stat->type = NT_ISWHT;
 #endif
-  
-  if (node_stat->type == NT_ISDIR) {
-	if ((stbuf.st_nlink <= 2) &&
-		(stbuf.st_size <= 2)) {
-	  node_stat->empty = 1;
-#ifdef _DEBUG_
-	  (void)fprintf(stderr,"%s: empty directory.\n", d_name);
-#endif
-	}
-  } else { /* node is not a directory. */
+  if (node_stat->type != NT_ISDIR) {
 	if (stbuf.st_size == 0) {
 	  node_stat->empty = 1;
 #ifdef _DEBUG_
