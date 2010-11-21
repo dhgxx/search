@@ -310,7 +310,8 @@ walk_through(const char *n_name, const char *d_name)
 		dl_append(n_name, frem);
 	  } else {
 		if ((0 != strncmp(n_name, ".", 2)) &&
-			(0 != strncmp(n_name, "..", 3))) {
+			(0 != strncmp(n_name, "..", 3)) &&
+			(node_stat->empty == 1)) {
 #ifdef _DEBUG_
 		  fprintf(stderr, "delete: %s\n", n_name);
 #endif
