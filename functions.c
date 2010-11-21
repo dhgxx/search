@@ -296,8 +296,9 @@ walk_through(const char *n_name, const char *d_name)
 	drem = dl_init();
   }
 
-  if (opts->odev == 0)
-	opts->odev = node_stat->dev;
+  if (opts->x_dev == 1)
+	if (opts->odev == 0)
+	  opts->odev = node_stat->dev;
   
   if (0 == cook_entry(n_name, d_name)) {
 	if (opts->delete == 1) {
