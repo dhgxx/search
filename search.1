@@ -8,7 +8,7 @@
 .Pp
 .Nm
 .Op Fl L | Fl P
-.Op Fl EIsv
+.Op Fl EIsvx
 .Ar path ...
 .Op Fl f Ar path
 .Op Fl n Ar pattern
@@ -18,7 +18,7 @@
 .Pp
 .Nm
 .Op Fl L | Fl P
-.Op Fl EIsv
+.Op Fl EIsvx
 .Fl f Ar path
 .Op path ...
 .Op Fl n Ar pattern
@@ -33,31 +33,37 @@ will walk through a file hierachy.
 Short options:
 .Bl -tag -width indent
 .It Fl E
-use modern regular expressions rather than `basic' (obsolete)
+Use modern regular expressions rather than `basic' (obsolete)
 regular expressions which is the default. See the man page of
 .Xr re_format 7
 for more information.
 .It Fl I
-case insensitive search, otherwise the specified pattern is
+Case insensitive search, otherwise the specified pattern is
 interpreted as case sensitive.
 .It Fl L
 follow symbolic links and return the information of the files
 they reference. It is an error if the referenced files do not
 exist.
 .It Fl P
-do not follow symbolic links, but return the information the
+Do not follow symbolic links, but return the information the
 symbolic links themselves, this is the default behaviour.
 .It Fl s
-cause
+Cause
 .Nm
 to alphabetically sort the search results. Note:
 .Ql search -s
 has identical output as
 .Ql search | sort .
 .It Fl v
-show version number
+Show version number
+.It Fl x
+Prevents
+.Nm
+from descending into directories that have a device
+number different than that of the file from which
+the descent began.
 .It Fl n Ar pattern
-specify a
+Specify a
 .Ar pattern
 to match the search results. Special shell pattern matching
 characters may be used as part of the pattern. See the man
@@ -65,7 +71,7 @@ page of
 .Xr fnmatch 3
 for more information.
 .It Fl r Ar regexp
-specify a regular expression
+Specify a regular expression
 .Ar regexp
 to match the search results. Unless the option
 .Ic -E
@@ -76,7 +82,7 @@ interpreted as
 .Xr re_format 7
 for more information.
 .It Fl t Ar ftype
-specify a file type
+Specify a file type
 .Ar ftype
 to match the search results.
 .Pp
@@ -103,35 +109,41 @@ white out (OpenBSD doesn't have this)
 Long options:
 .Bl -tag -width indent
 .It Fl -delete
-delete files or directories.
+Delete files or directories.
 .It Fl -empty
-find empty files or directories.
+Find empty files or directories.
 .It Fl -sort
-same as
+Same as
 .Ic -s .
+.It Fl -version
+Same as
+.Ic -v .
+.It Fl -xdev
+Same as
+.Ic -x .
 .It Fl -gid Ar gname
-same as
-.Ic Fl -group Ar gname .
+Same as
+.Fl -group Ar gname .
 .It Fl -group Ar gname
-find files belonging to
+Find files belonging to
 .Ar gname .
 .It Fl -uid Ar uname
 same as
-.Ic Fl -user Ar uname .
+.Fl -user Ar uname .
 .It Fl -user Ar uname
-find files belonging to
+Find files belonging to
 .Ar uname .
 .It Fl -name Ar pattern
-same as
+Same as
 .Ic -n Ar pattern .
 .It Fl -path Ar path
-same as
+Same as
 .Ic -f Ar path .
 .It Fl -regex Ar regexp
-same as
+Same as
 .Ic -r Ar regexp .
 .It Fl -type Ar ftype
-same as
+Same as
 .Ic -t Ar ftype .
 .El
 .Sh NOTES
