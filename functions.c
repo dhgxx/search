@@ -31,9 +31,6 @@
 #include <getopt.h>
 #include <grp.h>
 
-static unsigned int opt_empty;
-static unsigned int opt_delete;
-
 static node_t get_type(const char *);
 static int cook_entry(const char *, const char *);
 static int tell_group(const char *, const gid_t);
@@ -52,6 +49,8 @@ void
 lookup_option(int argc, char *argv[])
 {
   int ch;
+  static unsigned int opt_empty;
+  static unsigned int opt_delete;
   
   static struct option longopts[] = {
 	{ "gid",     required_argument, NULL,        2  },
@@ -66,10 +65,11 @@ lookup_option(int argc, char *argv[])
 	{ "delete",  no_argument,       &opt_delete, 1  },
 	{ "sort",    no_argument,       NULL,       's' },
 	{ "version", no_argument,       NULL,       'v' },
+	{ "xdev",    no_argument,       NULL,       'x' },
 	{ NULL,      0,                 NULL,        0  }
   };
 
-  while ((ch = getopt_long(argc, argv, "EILPsvf:n:r:t:", longopts, NULL)) != -1)
+  while ((ch = getopt_long(argc, argv, "EILPsvxf:n:r:t:", longopts, NULL)) != -1)
 	switch (ch) {
 	case 2:
 	case 3:
@@ -109,6 +109,9 @@ lookup_option(int argc, char *argv[])
 	  break;
 	case 'v':
 	  display_version();
+	  break;
+	case 'x':
+	  opts->x_dev = 1;
 	  break;
 	case 't':
 	  switch (optarg[0]) {
@@ -292,6 +295,9 @@ walk_through(const char *n_name, const char *d_name)
 	frem = dl_init();
 	drem = dl_init();
   }
+
+  if (opts->odev == 0)
+	opts->odev = node_stat->dev;
   
   if (0 == cook_entry(n_name, d_name)) {
 	if (opts->delete == 1) {
@@ -311,6 +317,10 @@ walk_through(const char *n_name, const char *d_name)
 	  }
 	}
   }
+  
+  if (opts->x_dev == 1)
+	if (node_stat->dev != opts->odev)
+	  return;
 
   if (node_stat->type == NT_ISDIR) {
 	
@@ -427,6 +437,7 @@ get_type(const char *d_name)
   node_stat->empty = 0;
   node_stat->gid = stbuf.st_gid;
   node_stat->uid = stbuf.st_uid;
+  node_stat->dev = stbuf.st_dev;
   
   if (S_ISBLK(stbuf.st_mode))
 	node_stat->type = NT_ISBLK;

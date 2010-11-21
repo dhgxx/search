@@ -77,12 +77,14 @@ typedef struct _options_t {
   char group[LINE_MAX];
   node_t n_type;
   int re_icase;
+  __dev_t odev;
   unsigned int find_path;
   unsigned int find_empty;
   unsigned int find_gid;
   unsigned int find_group;
   unsigned int find_uid;
   unsigned int find_user;
+  unsigned int x_dev;
   unsigned int delete;
   unsigned int sort;
   int (*stat_func)(const char *, struct stat *);
@@ -94,6 +96,7 @@ typedef struct _node_stat_t {
   unsigned int empty;
   uid_t uid;
   gid_t gid;
+  __dev_t dev;
 } node_stat_t;
 
 reg_t *rep;

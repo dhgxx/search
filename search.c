@@ -64,7 +64,9 @@ main(int argc, char *argv[])
   opts->find_user = 0;
   opts->delete = 0;
   opts->sort = 0;
-
+  opts->x_dev = 0;
+  opts->odev = 0;
+  
   bzero(opts->path, MAXPATHLEN);
   bzero(rep->re_str, LINE_MAX);
   rep->re_cflag =  REG_BASIC;
