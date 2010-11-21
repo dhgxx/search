@@ -282,7 +282,6 @@ walk_through(const char *n_name, const char *d_name)
   struct dirent *dir;
   DIR *dirp;
   DLIST *slist;
-  DLIST *frem, *drem;
   
   if (get_type(n_name) == NT_ERROR) {
 	(void)fprintf(stderr, "%s: %s: %s\n",
