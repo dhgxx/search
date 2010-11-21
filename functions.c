@@ -51,7 +51,6 @@ lookup_option(int argc, char *argv[])
   int ch;
   static unsigned int opt_empty;
   static unsigned int opt_delete;
-  static unsigned int opt_xdev;
   
   static struct option longopts[] = {
 	{ "gid",     required_argument, NULL,        2  },
@@ -64,13 +63,13 @@ lookup_option(int argc, char *argv[])
 	{ "uid",     required_argument, NULL,        5  },
 	{ "empty",   no_argument,       &opt_empty,  1  },
 	{ "delete",  no_argument,       &opt_delete, 1  },
-	{ "xdev",    no_argument,       &opt_xdev,   1  },
 	{ "sort",    no_argument,       NULL,       's' },
 	{ "version", no_argument,       NULL,       'v' },
+	{ "xdev",    no_argument,       NULL,       'x' },
 	{ NULL,      0,                 NULL,        0  }
   };
 
-  while ((ch = getopt_long(argc, argv, "EILPsvf:n:r:t:", longopts, NULL)) != -1)
+  while ((ch = getopt_long(argc, argv, "EILPsvxf:n:r:t:", longopts, NULL)) != -1)
 	switch (ch) {
 	case 2:
 	case 3:
@@ -104,14 +103,15 @@ lookup_option(int argc, char *argv[])
 		opts->find_empty = 1;
 	  if (opt_delete == 1)
 		opts->delete = 1;
-	  if (opt_xdev == 1)
-		opts->x_dev = 1;
 	  break;
 	case 's':
 	  opts->sort = 1;
 	  break;
 	case 'v':
 	  display_version();
+	  break;
+	case 'x':
+	  opts->x_dev = 1;
 	  break;
 	case 't':
 	  switch (optarg[0]) {
