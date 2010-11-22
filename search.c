@@ -28,8 +28,6 @@
 #include "extern.h"
 
 static void cleanup(int);
-static void deldir(DLIST *);
-static void dislink(DLIST *);
 
 int
 main(int argc, char *argv[])
@@ -61,14 +59,8 @@ main(int argc, char *argv[])
   opts->n_type = 0;
   opts->stat_func = lstat;
   opts->exec_func = NULL;
-  opts->find_path = 0;
-  opts->find_empty = 0;
-  opts->find_group = 0;
-  opts->find_user = 0;
-  opts->delete = 0;
-  opts->sort = 0;
-  opts->x_dev = 0;
   opts->odev = 0;
+  opts->flags = OPT_NONE;
   
   bzero(opts->path, MAXPATHLEN);
   bzero(rep->re_str, LINE_MAX);
@@ -79,13 +71,8 @@ main(int argc, char *argv[])
   argc -= optind;
   argv += optind;
 
-  if (opts->delete == 1) {
-	drm = dl_init();
-	frm = dl_init();
-  }
-  
-  if (argc == 0 &&
-	  opts->find_path == 0)
+  if ((argc == 0) &&
+	  (OPT_PATH != (opts->flags & OPT_PATH)))
 	display_usage();
 
   if (opts->exec_func == NULL)
@@ -93,27 +80,13 @@ main(int argc, char *argv[])
   
   comp_regex(rep);
 
-  if (opts->find_path == 1) {
+  if (opts->flags & OPT_PATH) {
 	walk_through(opts->path, opts->path);
   }
 
   if (argc > 0) {
 	for (i = 0; i < argc && argv[i]; i++)
 	  walk_through(argv[i], argv[i]);
-  }
-
-  if (!dl_empty(frm)) {
-	dislink(frm);
-  }
-  if (!dl_empty(drm)) {
-	deldir(drm);
-  }
-
-  if (opts->delete == 1) {
-	dl_free(&drm);
-	drm = NULL;
-	dl_free(&frm);
-	frm = NULL;
   }
 
   free_regex(rep);
@@ -133,7 +106,7 @@ cleanup(int sig)
   (void)fprintf(stderr, "\nUser interrupted, cleaning up...\n");
 #endif
   (void)fprintf(stderr, "\n");
-  
+
   if (rep != NULL) {
 	free_regex(rep);
 	rep = NULL;
@@ -151,38 +124,4 @@ cleanup(int sig)
   
   if (sig)
 	exit(1);
-}
-
-static void
-deldir(DLIST *dp)
-{  
-  if (dp == NULL)
-	return;
-  if (dl_empty(dp))
-	return;
-
-  dp->cur = dp->head;
-  while (dp->cur != NULL) {
-	if (rmdir(dp->cur->node) < 0)
-	  (void)fprintf(stderr, "%s: --rmdir(%s): %s\n",
-					opts->prog_name, dp->cur->node, strerror(errno));
-	dp->cur = dp->cur->next;
-  }
-}
-
-static void
-dislink(DLIST *dp)
-{
-  if (dp == NULL)
-	return;
-  if (dl_empty(dp))
-	return;
-
-  dp->cur = dp->head;
-  while (dp->cur != NULL) {
-	if (unlink(dp->cur->node) < 0)
-	  (void)fprintf(stderr, "%s: --unlink(%s): %s\n",
-					opts->prog_name, dp->cur->node, strerror(errno));
-	dp->cur = dp->cur->next;
-  }
 }
