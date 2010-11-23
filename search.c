@@ -61,19 +61,8 @@ main(int argc, char *argv[])
   opts->n_type = 0;
   opts->stat_func = lstat;
   opts->exec_func = NULL;
-<<<<<<< HEAD
-  opts->find_path = 0;
-  opts->find_empty = 0;
-  opts->find_group = 0;
-  opts->find_user = 0;
-  opts->delete = 0;
-  opts->sort = 0;
-  opts->x_dev = 0;
-  opts->odev = 0;
-=======
   opts->odev = 0;
   opts->flags = OPT_NONE;
->>>>>>> dev
   
   bzero(opts->path, MAXPATHLEN);
   bzero(rep->re_str, LINE_MAX);
@@ -84,18 +73,8 @@ main(int argc, char *argv[])
   argc -= optind;
   argv += optind;
 
-<<<<<<< HEAD
-  if (opts->delete == 1) {
-	drm = dl_init();
-	frm = dl_init();
-  }
-  
-  if (argc == 0 &&
-	  opts->find_path == 0)
-=======
   if ((argc == 0) &&
 	  (OPT_PATH != (opts->flags & OPT_PATH)))
->>>>>>> dev
 	display_usage();
 
   if (opts->exec_func == NULL)
@@ -103,11 +82,7 @@ main(int argc, char *argv[])
   
   comp_regex(rep);
 
-<<<<<<< HEAD
-  if (opts->find_path == 1) {
-=======
   if (opts->flags & OPT_PATH) {
->>>>>>> dev
 	walk_through(opts->path, opts->path);
   }
 
@@ -116,23 +91,6 @@ main(int argc, char *argv[])
 	  walk_through(argv[i], argv[i]);
   }
 
-<<<<<<< HEAD
-  if (!dl_empty(frm)) {
-	dislink(frm);
-  }
-  if (!dl_empty(drm)) {
-	deldir(drm);
-  }
-
-  if (opts->delete == 1) {
-	dl_free(&drm);
-	drm = NULL;
-	dl_free(&frm);
-	frm = NULL;
-  }
-
-=======
->>>>>>> dev
   free_regex(rep);
   rep = NULL;
   free(opts);
@@ -169,40 +127,4 @@ cleanup(int sig)
   if (sig)
 	exit(1);
 }
-<<<<<<< HEAD
 
-static void
-deldir(DLIST *dp)
-{  
-  if (dp == NULL)
-	return;
-  if (dl_empty(dp))
-	return;
-
-  dp->cur = dp->head;
-  while (dp->cur != NULL) {
-	if (rmdir(dp->cur->node) < 0)
-	  (void)fprintf(stderr, "%s: --rmdir(%s): %s\n",
-					opts->prog_name, dp->cur->node, strerror(errno));
-	dp->cur = dp->cur->next;
-  }
-}
-
-static void
-dislink(DLIST *dp)
-{
-  if (dp == NULL)
-	return;
-  if (dl_empty(dp))
-	return;
-
-  dp->cur = dp->head;
-  while (dp->cur != NULL) {
-	if (unlink(dp->cur->node) < 0)
-	  (void)fprintf(stderr, "%s: --unlink(%s): %s\n",
-					opts->prog_name, dp->cur->node, strerror(errno));
-	dp->cur = dp->cur->next;
-  }
-}
-=======
->>>>>>> dev

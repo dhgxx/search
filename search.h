@@ -42,11 +42,7 @@
 #include <signal.h>
 #include <fnmatch.h>
 #include <locale.h>
-<<<<<<< HEAD
 #include "dlist.h"
-=======
-#include <dlist.h>
->>>>>>> dev
 
 #define SEARCH_NAME "search"
 #define SEARCH_VERSION "0.4"
@@ -94,27 +90,12 @@ typedef struct _options_t {
   char user[LINE_MAX];
   char group[LINE_MAX];
   node_t n_type;
-<<<<<<< HEAD
   int re_icase;
-=======
->>>>>>> dev
 #ifndef _OpenBSD_
   __dev_t odev;
 #else
   dev_t odev;
 #endif
-<<<<<<< HEAD
-  unsigned int find_path;
-  unsigned int find_empty;
-  unsigned int find_gid;
-  unsigned int find_group;
-  unsigned int find_uid;
-  unsigned int find_user;
-  unsigned int x_dev;
-  unsigned int delete;
-  unsigned int sort;
-=======
->>>>>>> dev
   int (*stat_func)(const char *, struct stat *);
   int (*exec_func)(const char *, reg_t *);
   } options_t;
@@ -134,6 +115,5 @@ typedef struct _node_stat_t {
 reg_t *rep;
 options_t *opts;
 node_stat_t *node_stat;
-DLIST *drm, *frm;
 
 #endif	/* _SEARCH_H_ */

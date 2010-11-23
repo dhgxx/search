@@ -112,11 +112,7 @@ lookup_option(int argc, char *argv[])
 	  display_version();
 	  break;
 	case 'x':
-<<<<<<< HEAD
-	  opts->x_dev = 1;
-=======
 	  opts->flags |= OPT_XDEV;
->>>>>>> dev
 	  break;
 	case 't':
 	  switch (optarg[0]) {
@@ -286,11 +282,7 @@ walk_through(const char *n_name, const char *d_name)
   char tmp_buf[MAXPATHLEN];
   struct dirent *dir;
   DIR *dirp;
-<<<<<<< HEAD
-  DLIST *slist;
-=======
   DLIST *dir_ents, *rm_ents;
->>>>>>> dev
   
   if (get_type(n_name) == NT_ERROR) {
 	(void)fprintf(stderr, "%s: %s: %s\n",
@@ -299,25 +291,6 @@ walk_through(const char *n_name, const char *d_name)
   }
 
   nent = 0;
-<<<<<<< HEAD
-  slist = dl_init();
-
-  if (opts->x_dev == 1) {
-	if (opts->odev == 0)
-	  opts->odev = node_stat->dev;
-  }
-
-  ret = cook_entry(n_name, d_name);
-  
-  if (opts->x_dev == 1)
-	if (node_stat->dev != opts->odev)
-	  return;
-  
-  if (opts->delete == 1)
-	if (ret == 0 && node_stat->type != NT_ISDIR)
-	  dl_append(n_name, frm);
-  
-=======
   dir_ents = dl_init();
 
   ret = cook_entry(n_name, d_name);
@@ -329,7 +302,6 @@ walk_through(const char *n_name, const char *d_name)
 	  return;
   }
     
->>>>>>> dev
   if (node_stat->type == NT_ISDIR) {
 
 	if (NULL == (dirp = opendir(n_name))) {
@@ -343,35 +315,6 @@ walk_through(const char *n_name, const char *d_name)
 	  if ((0 != strncmp(dir->d_name, ".", 2)) &&
 		  (0 != strncmp(dir->d_name, "..", 3))) {
 		nent++;
-<<<<<<< HEAD
-		dl_append(dir->d_name, slist);
-	  }
-	}
-	
-	if (opts->sort == 1)
-	  dl_sort(slist);
-
-	if (opts->delete == 1) {
-	  if (0 != strncmp(n_name, ".", 2) &&
-		  0 != strncmp(n_name, "..", 3)) {
-		if (opts->find_empty == 1) {
-		  if (nent == 0)
-			dl_append(n_name, drm);
-		} else if (ret == 0)
-		  dl_append(n_name, drm);
-	  }
-	}
-	
-	slist->cur = slist->head;
-	while (slist->cur != NULL) {
-	  bzero(tmp_buf, MAXPATHLEN);
-	  strncpy(tmp_buf, n_name, MAXPATHLEN);
-	  if ('/' != tmp_buf[strlen(tmp_buf) - 1])
-		strncat(tmp_buf, "/", MAXPATHLEN);
-	  strncat(tmp_buf, slist->cur->node, MAXPATHLEN);
-	  walk_through(tmp_buf, slist->cur->node);
-	  slist->cur = slist->cur->next;
-=======
 		bzero(tmp_buf, MAXPATHLEN);
 		strncpy(tmp_buf, n_name, MAXPATHLEN);
 		if ('/' != tmp_buf[strlen(tmp_buf) - 1])
@@ -391,17 +334,10 @@ walk_through(const char *n_name, const char *d_name)
 	while (dir_ents->cur != NULL) {
 	  walk_through(dir_ents->cur->node, basename(dir_ents->cur->node));
 	  dir_ents->cur = dir_ents->cur->next;
->>>>>>> dev
 	}
 	
 	closedir(dirp);
   }
-<<<<<<< HEAD
-  
-  if (slist != NULL) {
-	dl_free(&slist);
-	slist = NULL;
-=======
 
   if (opts->flags & OPT_DEL)
 	dislink(dir_ents);
@@ -409,7 +345,6 @@ walk_through(const char *n_name, const char *d_name)
   if (dir_ents != NULL) {
 	dl_free(&dir_ents);
 	dir_ents = NULL;
->>>>>>> dev
   }
   
   return;
@@ -517,12 +452,8 @@ cook_entry(const char *n_name, const char *d_name)
 		found = 0;
 	}
 	
-<<<<<<< HEAD
-	if (opts->delete != 1 && found == 1) {
-=======
 	if ((found == 1) &&
 		(OPT_DEL != (opts->flags & OPT_DEL))) {
->>>>>>> dev
 	  (void)fprintf(stdout, "%s\n", n_name);
 	}
   }
