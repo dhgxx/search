@@ -315,20 +315,22 @@ walk_through(const char *n_name, const char *d_name)
 	  if ((0 != strncmp(dir->d_name, ".", 2)) &&
 		  (0 != strncmp(dir->d_name, "..", 3))) {
 		nent++;
+		
 		bzero(tmp_buf, MAXPATHLEN);
 		strncpy(tmp_buf, n_name, MAXPATHLEN);
 		if ('/' != tmp_buf[strlen(tmp_buf) - 1])
 		  strncat(tmp_buf, "/", MAXPATHLEN);
 		strncat(tmp_buf, dir->d_name, MAXPATHLEN);
 
-		dl_append(tmp_buf, dir_ents);
+		dl_append(tmp_buf, &dir_ents);
 		if (opts->flags & OPT_DEL)
-		  dir_ents->cur->deleted = 1;
+		  if (ret == 0)
+			dir_ents->cur->deleted = 1;
 	  }
 	}
 	
 	if (opts->flags & OPT_SORT)
-	  dl_sort(dir_ents);
+	  dl_sort(&dir_ents);
 
 	dir_ents->cur = dir_ents->head;
 	while (dir_ents->cur != NULL) {
@@ -339,8 +341,9 @@ walk_through(const char *n_name, const char *d_name)
 	closedir(dirp);
   }
 
-  if (opts->flags & OPT_DEL)
+  if (opts->flags & OPT_DEL) {
 	dislink(dir_ents);
+  }
   
   if (dir_ents != NULL) {
 	dl_free(&dir_ents);
@@ -534,7 +537,7 @@ dislink(DLIST *dp)
   if (dl_empty(dp))
 	return;
 
-  dl_sort(dp);
+  dl_sort(&dp);
   
   dp->cur = dp->tail;
   while (dp->cur != NULL) {
