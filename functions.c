@@ -171,7 +171,8 @@ exec_name(const char *d_name, reg_t *rep)
 {
   int flag, len, matched;
   char *pattern;
-  
+
+  flag = 0;
   pattern = rep->re_str;
   len = strlen(pattern);
   matched = FNM_NOMATCH;
@@ -180,8 +181,6 @@ exec_name(const char *d_name, reg_t *rep)
 	pattern = "*";
   
   if (opts->flags & OPT_ICAS) {
-	flag = 0;
-  } else {
 	flag = FNM_CASEFOLD | FNM_PERIOD | FNM_PATHNAME | FNM_NOESCAPE;
   }
   
