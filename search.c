@@ -58,7 +58,7 @@ main(int argc, char *argv[])
   opts->prog_version = SEARCH_VERSION;
   opts->n_type = 0;
   opts->stat_func = lstat;
-  opts->exec_func = NULL;
+  opts->exec_func = exec_name;
   opts->odev = 0;
   opts->flags = OPT_NONE;
   
@@ -74,9 +74,6 @@ main(int argc, char *argv[])
   if ((argc == 0) &&
 	  (OPT_PATH != (opts->flags & OPT_PATH)))
 	display_usage();
-
-  if (opts->exec_func == NULL)
-	opts->exec_func = exec_name;
   
   comp_regex(rep);
 
