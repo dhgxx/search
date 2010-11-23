@@ -26,6 +26,7 @@
 
 #include "search.h"
 
+#include <libgen.h>
 #include <pwd.h>
 #include <getopt.h>
 #include <grp.h>
@@ -34,6 +35,7 @@ static node_t get_type(const char *);
 static int cook_entry(const char *, const char *);
 static int tell_group(const char *, const gid_t);
 static int tell_user(const char *, const uid_t);
+static void dislink(DLIST *);
 
 void lookup_option(int, char **);
 void comp_regex(reg_t *);
@@ -72,18 +74,18 @@ lookup_option(int argc, char *argv[])
 	switch (ch) {
 	case 2:
 	case 3:
-	  opts->find_group = 1;
+	  opts->flags |= OPT_GRP;
 	  bzero(opts->group, LINE_MAX);
 	  strncpy(opts->group, optarg, LINE_MAX);
 	  break;
 	case 4:
 	case 5:
-	  opts->find_user = 1;
+	  opts->flags |=  OPT_USR;
 	  bzero(opts->user, LINE_MAX);
 	  strncpy(opts->user, optarg, LINE_MAX);
 	  break;
 	case 'f':
-	  opts->find_path = 1;
+	  opts->flags |= OPT_PATH;
 	  bzero(opts->path, MAXPATHLEN);
 	  strncpy(opts->path, optarg, MAXPATHLEN);
 	  break;
@@ -99,18 +101,22 @@ lookup_option(int argc, char *argv[])
 	  break;
 	case 0:
 	  if (opt_empty == 1)
-		opts->find_empty = 1;
+		opts->flags |= OPT_EMPTY;
 	  if (opt_delete == 1)
-		opts->delete = 1;
+		opts->flags |=  OPT_DEL;
 	  break;
 	case 's':
-	  opts->sort = 1;
+	  opts->flags |= OPT_SORT;
 	  break;
 	case 'v':
 	  display_version();
 	  break;
 	case 'x':
+<<<<<<< HEAD
 	  opts->x_dev = 1;
+=======
+	  opts->flags |= OPT_XDEV;
+>>>>>>> dev
 	  break;
 	case 't':
 	  switch (optarg[0]) {
@@ -151,7 +157,7 @@ lookup_option(int argc, char *argv[])
 	  rep->re_cflag |= REG_EXTENDED;
 	  break;
 	case 'I':
-	  rep->re_cflag |= REG_ICASE;
+	  opts->flags |= OPT_ICAS;
 	  break;
 	case 'L':
 	  opts->stat_func = stat;
@@ -169,18 +175,16 @@ exec_name(const char *d_name, reg_t *rep)
 {
   int flag, len, matched;
   char *pattern;
-  
+
+  flag = 0;
   pattern = rep->re_str;
   len = strlen(pattern);
-  flag = rep->re_cflag;
   matched = FNM_NOMATCH;
   
   if (len == 0)
 	pattern = "*";
   
-  if ( (flag & REG_ICASE) == 0) {
-	flag = 0;
-  } else {
+  if (opts->flags & OPT_ICAS) {
 	flag = FNM_CASEFOLD | FNM_PERIOD | FNM_PATHNAME | FNM_NOESCAPE;
   }
   
@@ -197,14 +201,15 @@ exec_name(const char *d_name, reg_t *rep)
 void
 comp_regex(reg_t *rep)
 {
-  int ret, len, cflag;
+  int ret, len;
   regex_t *fmt;
   char msg[LINE_MAX];
   char *str;
   
   len = strlen(rep->re_str);
-  cflag = rep->re_cflag;
-  
+  if (opts->flags & OPT_ICAS)
+	rep->re_cflag |= REG_ICASE;
+    
   bzero(msg, LINE_MAX);
   str = rep->re_str;
   fmt = &(rep->re_fmt);
@@ -212,7 +217,7 @@ comp_regex(reg_t *rep)
   if (len == 0)
 	str = ".*";		/* defaults to search all types. */
 
-  ret = regcomp(fmt, str, cflag);
+  ret = regcomp(fmt, str, rep->re_cflag);
 
   if (ret != 0) {
 	if (regerror(ret, fmt, msg, LINE_MAX) > 0) {
@@ -281,7 +286,11 @@ walk_through(const char *n_name, const char *d_name)
   char tmp_buf[MAXPATHLEN];
   struct dirent *dir;
   DIR *dirp;
+<<<<<<< HEAD
   DLIST *slist;
+=======
+  DLIST *dir_ents, *rm_ents;
+>>>>>>> dev
   
   if (get_type(n_name) == NT_ERROR) {
 	(void)fprintf(stderr, "%s: %s: %s\n",
@@ -290,6 +299,7 @@ walk_through(const char *n_name, const char *d_name)
   }
 
   nent = 0;
+<<<<<<< HEAD
   slist = dl_init();
 
   if (opts->x_dev == 1) {
@@ -307,6 +317,19 @@ walk_through(const char *n_name, const char *d_name)
 	if (ret == 0 && node_stat->type != NT_ISDIR)
 	  dl_append(n_name, frm);
   
+=======
+  dir_ents = dl_init();
+
+  ret = cook_entry(n_name, d_name);
+  
+  if (opts->flags & OPT_XDEV) {
+	if (opts->odev == 0)
+	  opts->odev = node_stat->dev;
+	if (node_stat->dev != opts->odev)
+	  return;
+  }
+    
+>>>>>>> dev
   if (node_stat->type == NT_ISDIR) {
 
 	if (NULL == (dirp = opendir(n_name))) {
@@ -320,6 +343,7 @@ walk_through(const char *n_name, const char *d_name)
 	  if ((0 != strncmp(dir->d_name, ".", 2)) &&
 		  (0 != strncmp(dir->d_name, "..", 3))) {
 		nent++;
+<<<<<<< HEAD
 		dl_append(dir->d_name, slist);
 	  }
 	}
@@ -347,14 +371,45 @@ walk_through(const char *n_name, const char *d_name)
 	  strncat(tmp_buf, slist->cur->node, MAXPATHLEN);
 	  walk_through(tmp_buf, slist->cur->node);
 	  slist->cur = slist->cur->next;
+=======
+		bzero(tmp_buf, MAXPATHLEN);
+		strncpy(tmp_buf, n_name, MAXPATHLEN);
+		if ('/' != tmp_buf[strlen(tmp_buf) - 1])
+		  strncat(tmp_buf, "/", MAXPATHLEN);
+		strncat(tmp_buf, dir->d_name, MAXPATHLEN);
+
+		dl_append(tmp_buf, dir_ents);
+		if (opts->flags & OPT_DEL)
+		  dir_ents->cur->deleted = 1;
+	  }
+	}
+	
+	if (opts->flags & OPT_SORT)
+	  dl_sort(dir_ents);
+
+	dir_ents->cur = dir_ents->head;
+	while (dir_ents->cur != NULL) {
+	  walk_through(dir_ents->cur->node, basename(dir_ents->cur->node));
+	  dir_ents->cur = dir_ents->cur->next;
+>>>>>>> dev
 	}
 	
 	closedir(dirp);
   }
+<<<<<<< HEAD
   
   if (slist != NULL) {
 	dl_free(&slist);
 	slist = NULL;
+=======
+
+  if (opts->flags & OPT_DEL)
+	dislink(dir_ents);
+  
+  if (dir_ents != NULL) {
+	dl_free(&dir_ents);
+	dir_ents = NULL;
+>>>>>>> dev
   }
   
   return;
@@ -447,22 +502,27 @@ cook_entry(const char *n_name, const char *d_name)
 
 	found = 1;
 	
-	if (opts->find_empty == 1) {
+	if (opts->flags & OPT_EMPTY) {
 	  if (node_stat->empty != 1)
 		found = 0;
 	}
 
-	if (opts->find_group == 1) {
+	if (opts->flags & OPT_GRP) {
 	  if (0 != tell_group(opts->group, node_stat->gid))
 		found = 0;
 	}
 	
-	if (opts->find_user == 1) {
+	if (opts->flags & OPT_USR) {
 	  if (0 != tell_user(opts->user, node_stat->uid))
 		found = 0;
 	}
 	
+<<<<<<< HEAD
 	if (opts->delete != 1 && found == 1) {
+=======
+	if ((found == 1) &&
+		(OPT_DEL != (opts->flags & OPT_DEL))) {
+>>>>>>> dev
 	  (void)fprintf(stdout, "%s\n", n_name);
 	}
   }
@@ -530,4 +590,38 @@ tell_user(const char *suid, const uid_t uid)
 	return (0);
   
   return (-1);
+}
+
+static void
+dislink(DLIST *dp)
+{
+  int ret;
+  struct stat stbuf;
+  
+  if (dp == NULL)
+	return;
+  if (dl_empty(dp))
+	return;
+
+  dl_sort(dp);
+  
+  dp->cur = dp->tail;
+  while (dp->cur != NULL) {
+	if (dp->cur->deleted == 1) {
+	  opts->stat_func(dp->cur->node, &stbuf);
+
+	  if(!S_ISDIR(stbuf.st_mode)) {
+		if (unlink(dp->cur->node) < 0)
+		  (void)fprintf(stderr, "%s: --unlink(%s): %s\n",
+						opts->prog_name, dp->cur->node, strerror(errno));
+	  } else {
+		ret = rmdir(dp->cur->node);
+		if (ret < 0)
+		  if (errno != ENOTEMPTY)
+			(void)fprintf(stderr, "%s: --rmdir(%s): %s\n",
+						  opts->prog_name, dp->cur->node, strerror(errno));
+	  }
+	}
+	dp->cur = dp->cur->pre;
+  }
 }

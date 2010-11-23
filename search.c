@@ -61,6 +61,7 @@ main(int argc, char *argv[])
   opts->n_type = 0;
   opts->stat_func = lstat;
   opts->exec_func = NULL;
+<<<<<<< HEAD
   opts->find_path = 0;
   opts->find_empty = 0;
   opts->find_group = 0;
@@ -69,6 +70,10 @@ main(int argc, char *argv[])
   opts->sort = 0;
   opts->x_dev = 0;
   opts->odev = 0;
+=======
+  opts->odev = 0;
+  opts->flags = OPT_NONE;
+>>>>>>> dev
   
   bzero(opts->path, MAXPATHLEN);
   bzero(rep->re_str, LINE_MAX);
@@ -79,6 +84,7 @@ main(int argc, char *argv[])
   argc -= optind;
   argv += optind;
 
+<<<<<<< HEAD
   if (opts->delete == 1) {
 	drm = dl_init();
 	frm = dl_init();
@@ -86,6 +92,10 @@ main(int argc, char *argv[])
   
   if (argc == 0 &&
 	  opts->find_path == 0)
+=======
+  if ((argc == 0) &&
+	  (OPT_PATH != (opts->flags & OPT_PATH)))
+>>>>>>> dev
 	display_usage();
 
   if (opts->exec_func == NULL)
@@ -93,7 +103,11 @@ main(int argc, char *argv[])
   
   comp_regex(rep);
 
+<<<<<<< HEAD
   if (opts->find_path == 1) {
+=======
+  if (opts->flags & OPT_PATH) {
+>>>>>>> dev
 	walk_through(opts->path, opts->path);
   }
 
@@ -102,6 +116,7 @@ main(int argc, char *argv[])
 	  walk_through(argv[i], argv[i]);
   }
 
+<<<<<<< HEAD
   if (!dl_empty(frm)) {
 	dislink(frm);
   }
@@ -116,6 +131,8 @@ main(int argc, char *argv[])
 	frm = NULL;
   }
 
+=======
+>>>>>>> dev
   free_regex(rep);
   rep = NULL;
   free(opts);
@@ -133,7 +150,7 @@ cleanup(int sig)
   (void)fprintf(stderr, "\nUser interrupted, cleaning up...\n");
 #endif
   (void)fprintf(stderr, "\n");
-  
+
   if (rep != NULL) {
 	free_regex(rep);
 	rep = NULL;
@@ -152,6 +169,7 @@ cleanup(int sig)
   if (sig)
 	exit(1);
 }
+<<<<<<< HEAD
 
 static void
 deldir(DLIST *dp)
@@ -186,3 +204,5 @@ dislink(DLIST *dp)
 	dp->cur = dp->cur->next;
   }
 }
+=======
+>>>>>>> dev
