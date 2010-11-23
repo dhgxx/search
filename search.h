@@ -54,10 +54,10 @@
 #define OPT_GRP   0x0008
 #define OPT_UID   0x0020
 #define OPT_USR   0x0040
-#define OPT_XDEV  0x0080
-#define OPT_DEL   0x0200
-#define OPT_SORT  0x0400
-#define OPT_ICAS  0x0800
+#define OPT_XDEV  0x0060
+#define OPT_DEL   0x0080
+#define OPT_SORT  0x0200
+#define OPT_ICAS  0x0400
 
 typedef enum _node_t {
   NT_UNKNOWN = DT_UNKNOWN,
@@ -83,6 +83,7 @@ typedef struct _reg_t {
 } reg_t;
 
 typedef struct _options_t {
+  unsigned int flags;
   const char *prog_name;
   const char *prog_version;
   char path[MAXPATHLEN];
@@ -96,8 +97,7 @@ typedef struct _options_t {
 #endif
   int (*stat_func)(const char *, struct stat *);
   int (*exec_func)(const char *, reg_t *);
-  unsigned int flags;
-} options_t;
+  } options_t;
 
 typedef struct _node_stat_t {
   node_t type;
