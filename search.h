@@ -76,16 +76,14 @@ typedef enum _node_t {
   NT_ERROR = -1
 } node_t;
 
-typedef struct _reg_t {
-  regex_t re_fmt;
-  char re_str[LINE_MAX];
-  int re_cflag;
-} reg_t;
+typedef struct _match_t {
+  regex_t fmt;
+  char pattern[LINE_MAX];
+  unsigned int cflag;
+} match_t;
 
 typedef struct _options_t {
   unsigned int flags;
-  const char *prog_name;
-  const char *prog_version;
   char path[MAXPATHLEN];
   char user[LINE_MAX];
   char group[LINE_MAX];
@@ -96,8 +94,8 @@ typedef struct _options_t {
   dev_t odev;
 #endif
   int (*stat_func)(const char *, struct stat *);
-  int (*exec_func)(const char *, reg_t *);
-  } options_t;
+  int (*exec_func)(const char *, struct _options_t **, match_t **);
+} options_t;
 
 typedef struct _node_stat_t {
   node_t type;
@@ -110,9 +108,5 @@ typedef struct _node_stat_t {
   dev_t dev;
 #endif
 } node_stat_t;
-
-reg_t *rep;
-options_t *opts;
-node_stat_t *node_stat;
 
 #endif	/* _SEARCH_H_ */

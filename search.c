@@ -27,6 +27,12 @@
 #include "search.h"
 #include "extern.h"
 
+
+options_t *opts;
+match_t *mt;
+node_stat_t *node_stat;
+
+static void free_mt(match_t **);
 static void cleanup(int);
 
 int
@@ -37,36 +43,33 @@ main(int argc, char *argv[])
   extern int optind;
   
   int i;
-  struct stat *stbuf;
+  static struct stat *stbuf;
   
   (void)setlocale(LC_CTYPE, "");
   signal(SIGINT, cleanup);
   
-  rep = (reg_t *)malloc(sizeof(reg_t));
   opts = (options_t *)malloc(sizeof(options_t));
+  mt = (match_t *)malloc(sizeof(match_t));
   node_stat = (node_stat_t *)malloc(sizeof(node_stat_t));
   
-  if (rep == NULL ||
-	  opts == NULL ||
+  if (opts == NULL ||
+	  mt == NULL ||
 	  node_stat == NULL) {
 	(void)fprintf(stderr, "%s: malloc(3): %s.\n",
 				  SEARCH_NAME, strerror(errno));
-	exit(0);
+	cleanup(1);
+	exit(1);
   }
 
-  opts->prog_name = SEARCH_NAME;
-  opts->prog_version = SEARCH_VERSION;
   opts->n_type = NT_UNKNOWN;
   opts->stat_func = lstat;
   opts->exec_func = exec_name;
   opts->odev = 0;
   opts->flags = OPT_NONE;
-  
   bzero(opts->path, MAXPATHLEN);
-  bzero(rep->re_str, LINE_MAX);
-  rep->re_cflag =  REG_BASIC;
+  bzero(mt->pattern, LINE_MAX);
   
-  lookup_option(argc, argv);
+  lookup_options(argc, argv, &opts, &mt);
   
   argc -= optind;
   argv += optind;
@@ -75,38 +78,47 @@ main(int argc, char *argv[])
 	  (OPT_PATH != (opts->flags & OPT_PATH)))
 	display_usage();
   
-  comp_regex(rep);
+  if (comp_regex(&opts, &mt) < 0) {
+	cleanup (1);
+	exit (1);
+  }
 
   if (opts->flags & OPT_PATH) {
-	walk_through(opts->path, opts->path);
+	walk_through(opts->path, opts->path, &opts, &mt, &node_stat);
   }
 
   if (argc > 0) {
 	for (i = 0; i < argc && argv[i]; i++)
-	  walk_through(argv[i], argv[i]);
+	  walk_through(argv[i], argv[i], &opts, &mt, &node_stat);
   }
 
-  free_regex(rep);
-  rep = NULL;
-  free(opts);
-  opts = NULL;
-  free(node_stat);
-  node_stat = NULL;
-
+  cleanup(1);
   exit(0);
+}
+
+static void
+free_mt(match_t **m)
+{
+  match_t *mt = *m;
+
+  if (mt == NULL)
+	return;
+
+  if (&(mt->fmt) != NULL) {
+	regfree(&(mt->fmt));
+  }
+  
+  free(mt);
+  mt = NULL;
+  return;
 }
 
 static void
 cleanup(int sig)
 {
-#ifdef _DEBUG_
-  (void)fprintf(stderr, "\nUser interrupted, cleaning up...\n");
-#endif
-  (void)fprintf(stderr, "\n");
-
-  if (rep != NULL) {
-	free_regex(rep);
-	rep = NULL;
+  if (mt != NULL) {
+	free_mt(&mt);
+	mt = NULL;
   }
   
   if (opts != NULL) {
@@ -120,5 +132,5 @@ cleanup(int sig)
   }
   
   if (sig)
-	exit(1);
+	exit(0);
 }
