@@ -36,7 +36,7 @@ static node_t get_type(const char *);
 static int cook_entry(const char *, const char *);
 static int tell_group(const char *, const gid_t);
 static int tell_user(const char *, const uid_t);
-static void dislink(DLIST **);
+static void dislink(dl_node **);
 
 void lookup_option(int, char **);
 void comp_regex(reg_t *);
@@ -279,10 +279,11 @@ void
 walk_through(const char *n_name, const char *d_name)
 {
   int ret, nent;
+  char *pbase;
   char tmp_buf[MAXPATHLEN];
   struct dirent *dir;
   DIR *dirp;
-  DLIST *dir_ents, *rm_ents;
+  DLIST *dlist;
   
   if (get_type(n_name) == NT_ERROR) {
 	(void)fprintf(stderr, "%s: %s: %s\n",
@@ -291,7 +292,7 @@ walk_through(const char *n_name, const char *d_name)
   }
 
   nent = 0;
-  dir_ents = dl_init();
+  dlist = dl_init();
 
   ret = cook_entry(n_name, d_name);
   
@@ -305,14 +306,23 @@ walk_through(const char *n_name, const char *d_name)
 					  d_name, node_stat->dev, opts->odev);
 #endif
 	  }
-	  if (node_stat->dev != opts->odev)
+	  if (node_stat->dev != opts->odev) {
+		if (dlist != NULL) {
+		  dl_free(&dlist);
+		  dlist = NULL;
+		}
 		return;
+	  }
 	}
 	
 	if (NULL == (dirp = opendir(n_name))) {
 	  (void)fprintf(stderr,
 					"%s: %s: %s\n",
 					opts->prog_name, n_name, strerror(errno));
+	  if (dlist != NULL) {
+		dl_free(&dlist);
+		dlist = NULL;
+	  }
 	  return;
 	}
 
@@ -320,40 +330,52 @@ walk_through(const char *n_name, const char *d_name)
 	  if ((0 != strncmp(dir->d_name, ".", strlen(dir->d_name) + 1)) &&
 		  (0 != strncmp(dir->d_name, "..", strlen(dir->d_name) + 1))) {
 		nent++;
-		
 		bzero(tmp_buf, MAXPATHLEN);
 		strncpy(tmp_buf, n_name, MAXPATHLEN);
 		if ('/' != tmp_buf[strlen(tmp_buf) - 1])
 		  strncat(tmp_buf, "/", MAXPATHLEN);
 		strncat(tmp_buf, dir->d_name, MAXPATHLEN);
-
-		dl_append(tmp_buf, &dir_ents);
-		if (opts->flags & OPT_DEL)
+		dl_append(tmp_buf, &dlist);
+		if (opts->flags & OPT_DEL) {
 		  if (ret == 0)
-			dir_ents->cur->deleted = 1;
+			dlist->cur->deleted = 1;
+		}
 	  }
 	}
 	
 	if (opts->flags & OPT_SORT)
-	  dl_sort(&dir_ents);
+	  dl_sort(&dlist);
 
-	dir_ents->cur = dir_ents->head;
-	while (dir_ents->cur != NULL) {
-	  if (dir_ents->cur->node != NULL)
-		walk_through(dir_ents->cur->node, basename(dir_ents->cur->node));
-	  dir_ents->cur = dir_ents->cur->next;
+	dlist->cur = dlist->head;
+	while (dlist->cur != NULL) {
+	  if (dlist->cur->ent != NULL) {
+		pbase = basename(dlist->cur->ent);
+		walk_through(dlist->cur->ent, pbase);
+	  }
+	  dlist->cur = dlist->cur->next;
+	}
+
+	if (opts->flags & OPT_EMPTY) {
+	  if (nent == 0)
+		ret = 0;
 	}
 	
 	closedir(dirp);
   }
-
+ 
   if (opts->flags & OPT_DEL) {
-	dislink(&dir_ents);
+	if (ret == 0)
+	  if ((0 != strncmp(n_name, ".", strlen(n_name) + 1)) &&
+		  (0 != strncmp(n_name, "..", strlen(n_name) + 1))) {
+		dl_append(n_name, &dlist);
+		dlist->cur->deleted = 1;
+	  }
+	dl_foreach(&dlist, dislink);
   }
   
-  if (dir_ents != NULL) {
-	dl_free(&dir_ents);
-	dir_ents = NULL;
+  if (dlist) {
+	dl_free(&dlist);
+	dlist = NULL;
   }
   
   return;
@@ -393,7 +415,7 @@ display_version(void)
 static node_t
 get_type(const char *d_name)
 {
-  struct stat stbuf;
+  static struct stat stbuf;
   
   if (opts->stat_func(d_name, &stbuf)  < 0 )
 	return (NT_ERROR);
@@ -533,37 +555,29 @@ tell_user(const char *suid, const uid_t uid)
 }
 
 static void
-dislink(DLIST **d)
+dislink(dl_node **n)
 {
   int ret;
-  struct stat stbuf;
-  DLIST *dp = *d;
+  dl_node *np = *n;
+  static struct stat stbuf;
   
-  if (dp == NULL)
-	return;
-  if (dl_empty(&dp))
+  if (np == NULL)
 	return;
 
-  dl_sort(&dp);
-  
-  dp->cur = dp->tail;
-  while (dp->cur != NULL) {
-
-	if (dp->cur->deleted == 1) {
-
-	  opts->stat_func(dp->cur->node, &stbuf);
-	  if(!S_ISDIR(stbuf.st_mode)) {
-		if (unlink(dp->cur->node) < 0)
-		  (void)fprintf(stderr, "%s: --unlink(%s): %s\n",
-						opts->prog_name, dp->cur->node, strerror(errno));
-	  } else {
-		ret = rmdir(dp->cur->node);
-		if (ret < 0)
-		  if (errno != ENOTEMPTY)
-			(void)fprintf(stderr, "%s: --rmdir(%s): %s\n",
-						  opts->prog_name, dp->cur->node, strerror(errno));
-	  }
+  if (np->deleted == 1) {
+	
+	opts->stat_func(np->ent, &stbuf);
+	
+	if(S_ISDIR(stbuf.st_mode)) {
+	  ret = rmdir(np->ent);
+	  if (ret < 0)
+		if (errno != ENOTEMPTY)
+		  (void)fprintf(stderr, "%s: --rmdir(%s): %s\n",
+						opts->prog_name, np->ent, strerror(errno));
+	} else {
+	  if (unlink(np->ent) < 0)
+		(void)fprintf(stderr, "%s: --unlink(%s): %s\n",
+					  opts->prog_name, np->ent, strerror(errno));
 	}
-	dp->cur = dp->cur->pre;
   }
 }
