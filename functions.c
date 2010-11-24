@@ -31,11 +31,12 @@
 #include <getopt.h>
 #include <grp.h>
 
+static void display_version(void);
 static node_t get_type(const char *);
 static int cook_entry(const char *, const char *);
 static int tell_group(const char *, const gid_t);
 static int tell_user(const char *, const uid_t);
-static void dislink(DLIST *);
+static void dislink(DLIST **);
 
 void lookup_option(int, char **);
 void comp_regex(reg_t *);
@@ -44,7 +45,6 @@ int exec_name(const char *, reg_t *);
 void free_regex(reg_t *);
 void walk_through(const char *, const char *);
 void display_usage(void);
-void display_version(void);
 
 void
 lookup_option(int argc, char *argv[])
@@ -295,15 +295,20 @@ walk_through(const char *n_name, const char *d_name)
 
   ret = cook_entry(n_name, d_name);
   
-  if (opts->flags & OPT_XDEV) {
-	if (opts->odev == 0)
-	  opts->odev = node_stat->dev;
-	if (node_stat->dev != opts->odev)
-	  return;
-  }
-    
   if (node_stat->type == NT_ISDIR) {
 
+	if (opts->flags & OPT_XDEV) {
+	  if (opts->odev == 0) {
+		opts->odev = node_stat->dev;
+#ifdef _DEBUG_
+		(void)fprintf(stderr, "%s (dev=%d, odev=%d)\n",
+					  d_name, node_stat->dev, opts->odev);
+#endif
+	  }
+	  if (node_stat->dev != opts->odev)
+		return;
+	}
+	
 	if (NULL == (dirp = opendir(n_name))) {
 	  (void)fprintf(stderr,
 					"%s: %s: %s\n",
@@ -312,8 +317,8 @@ walk_through(const char *n_name, const char *d_name)
 	}
 
 	while (NULL != (dir = readdir(dirp))) {
-	  if ((0 != strncmp(dir->d_name, ".", 2)) &&
-		  (0 != strncmp(dir->d_name, "..", 3))) {
+	  if ((0 != strncmp(dir->d_name, ".", strlen(dir->d_name) + 1)) &&
+		  (0 != strncmp(dir->d_name, "..", strlen(dir->d_name) + 1))) {
 		nent++;
 		
 		bzero(tmp_buf, MAXPATHLEN);
@@ -334,7 +339,8 @@ walk_through(const char *n_name, const char *d_name)
 
 	dir_ents->cur = dir_ents->head;
 	while (dir_ents->cur != NULL) {
-	  walk_through(dir_ents->cur->node, basename(dir_ents->cur->node));
+	  if (dir_ents->cur->node != NULL)
+		walk_through(dir_ents->cur->node, basename(dir_ents->cur->node));
 	  dir_ents->cur = dir_ents->cur->next;
 	}
 	
@@ -342,7 +348,7 @@ walk_through(const char *n_name, const char *d_name)
   }
 
   if (opts->flags & OPT_DEL) {
-	dislink(dir_ents);
+	dislink(&dir_ents);
   }
   
   if (dir_ents != NULL) {
@@ -376,7 +382,7 @@ display_usage(void)
   exit (0);
 }
 
-void
+static void
 display_version(void)
 {  
   (void)fprintf(stderr,	"%s version %s\n",
@@ -527,23 +533,25 @@ tell_user(const char *suid, const uid_t uid)
 }
 
 static void
-dislink(DLIST *dp)
+dislink(DLIST **d)
 {
   int ret;
   struct stat stbuf;
+  DLIST *dp = *d;
   
   if (dp == NULL)
 	return;
-  if (dl_empty(dp))
+  if (dl_empty(&dp))
 	return;
 
   dl_sort(&dp);
   
   dp->cur = dp->tail;
   while (dp->cur != NULL) {
-	if (dp->cur->deleted == 1) {
-	  opts->stat_func(dp->cur->node, &stbuf);
 
+	if (dp->cur->deleted == 1) {
+
+	  opts->stat_func(dp->cur->node, &stbuf);
 	  if(!S_ISDIR(stbuf.st_mode)) {
 		if (unlink(dp->cur->node) < 0)
 		  (void)fprintf(stderr, "%s: --unlink(%s): %s\n",

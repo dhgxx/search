@@ -56,7 +56,7 @@ main(int argc, char *argv[])
 
   opts->prog_name = SEARCH_NAME;
   opts->prog_version = SEARCH_VERSION;
-  opts->n_type = 0;
+  opts->n_type = NT_UNKNOWN;
   opts->stat_func = lstat;
   opts->exec_func = exec_name;
   opts->odev = 0;
