@@ -31,12 +31,12 @@
 #include <getopt.h>
 #include <grp.h>
 
-static void display_version(void);
 static node_t get_type(const char *);
 static int cook_entry(const char *, const char *);
 static int tell_group(const char *, const gid_t);
 static int tell_user(const char *, const uid_t);
 static void dislink(dl_node **);
+static void display_version(void);
 
 void lookup_option(int, char **);
 void comp_regex(reg_t *);
@@ -381,37 +381,6 @@ walk_through(const char *n_name, const char *d_name)
   return;
 }
 
-void
-display_usage(void)
-{
-  static const char *usage = "usage:\t%s [-EILPsv]\
- ...\
- [-f|--path ...]\
- [-n|--name ...]\
- [-r|--regex ...]\
- [-t|--type ...]\
- [...]\n\
- \t%s [-EILPsv]\
- -f | --path ...\
- [...]\
- [-n|--name ...]\
- [-r|--regex ...]\
- [-t|--type ...]\
- [...]\n";
-
-  (void)fprintf(stderr,	usage,
-				opts->prog_name, opts->prog_name);
-  exit (0);
-}
-
-static void
-display_version(void)
-{  
-  (void)fprintf(stderr,	"%s version %s\n",
-				opts->prog_name, opts->prog_version);
-  exit (0);
-}
-
 static node_t
 get_type(const char *d_name)
 {
@@ -580,4 +549,35 @@ dislink(dl_node **n)
 					  opts->prog_name, np->ent, strerror(errno));
 	}
   }
+}
+
+void
+display_usage(void)
+{
+  static const char *usage = "usage:\t%s [-EILPsv]\
+ ...\
+ [-f|--path ...]\
+ [-n|--name ...]\
+ [-r|--regex ...]\
+ [-t|--type ...]\
+ [...]\n\
+ \t%s [-EILPsv]\
+ -f | --path ...\
+ [...]\
+ [-n|--name ...]\
+ [-r|--regex ...]\
+ [-t|--type ...]\
+ [...]\n";
+
+  (void)fprintf(stderr,	usage,
+				opts->prog_name, opts->prog_name);
+  exit (0);
+}
+
+static void
+display_version(void)
+{  
+  (void)fprintf(stderr,	"%s version %s\n",
+				opts->prog_name, opts->prog_version);
+  exit (0);
 }
