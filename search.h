@@ -93,8 +93,6 @@ typedef struct _options_t {
 #else
   dev_t odev;
 #endif
-  int (*stat_func)(const char *, struct stat *);
-  int (*exec_func)(const char *, struct _options_t **, match_t **);
 } options_t;
 
 typedef struct _node_stat_t {
@@ -108,5 +106,13 @@ typedef struct _node_stat_t {
   dev_t dev;
 #endif
 } node_stat_t;
+
+typedef struct _plan_t {
+  node_stat_t *stat;
+  options_t *opt;
+  match_t *mt;
+  int (*stat_func)(const char *, struct stat *);
+  int (*exec_func)(const char *, struct _plan_t *);
+} plan_t;
 
 #endif	/* _SEARCH_H_ */

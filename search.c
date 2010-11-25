@@ -27,10 +27,7 @@
 #include "search.h"
 #include "extern.h"
 
-
-options_t *opts;
-match_t *mt;
-node_stat_t *node_stat;
+plan_t plan;
 
 static void free_mt(match_t **);
 static void cleanup(int);
@@ -48,48 +45,48 @@ main(int argc, char *argv[])
   (void)setlocale(LC_CTYPE, "");
   signal(SIGINT, cleanup);
   
-  opts = (options_t *)malloc(sizeof(options_t));
-  mt = (match_t *)malloc(sizeof(match_t));
-  node_stat = (node_stat_t *)malloc(sizeof(node_stat_t));
+  plan.opt = (options_t *)malloc(sizeof(options_t));
+  plan.mt = (match_t *)malloc(sizeof(match_t));
+  plan.stat = (node_stat_t *)malloc(sizeof(node_stat_t));
   
-  if (opts == NULL ||
-	  mt == NULL ||
-	  node_stat == NULL) {
+  if (plan.opt == NULL ||
+	  plan.mt == NULL ||
+	  plan.stat == NULL) {
 	(void)fprintf(stderr, "%s: malloc(3): %s.\n",
 				  SEARCH_NAME, strerror(errno));
 	cleanup(1);
 	exit(1);
   }
 
-  opts->n_type = NT_UNKNOWN;
-  opts->stat_func = lstat;
-  opts->exec_func = exec_name;
-  opts->odev = 0;
-  opts->flags = OPT_NONE;
-  bzero(opts->path, MAXPATHLEN);
-  bzero(mt->pattern, LINE_MAX);
+  plan.opt->n_type = NT_UNKNOWN;
+  plan.stat_func = lstat;
+  plan.exec_func = exec_name;
+  plan.opt->odev = 0;
+  plan.opt->flags = OPT_NONE;
+  bzero(plan.opt->path, MAXPATHLEN);
+  bzero(plan.mt->pattern, LINE_MAX);
   
-  lookup_options(argc, argv, &opts, &mt);
+  lookup_options(argc, argv, &plan);
   
   argc -= optind;
   argv += optind;
 
   if ((argc == 0) &&
-	  (OPT_PATH != (opts->flags & OPT_PATH)))
+	  (OPT_PATH != (plan.opt->flags & OPT_PATH)))
 	display_usage();
   
-  if (comp_regex(&opts, &mt) < 0) {
+  if (comp_regex(&plan) < 0) {
 	cleanup (1);
 	exit (1);
   }
 
-  if (opts->flags & OPT_PATH) {
-	walk_through(opts->path, opts->path, &opts, &mt, &node_stat);
+  if (plan.opt->flags & OPT_PATH) {
+	walk_through(plan.opt->path, plan.opt->path, &plan);
   }
 
   if (argc > 0) {
 	for (i = 0; i < argc && argv[i]; i++)
-	  walk_through(argv[i], argv[i], &opts, &mt, &node_stat);
+	  walk_through(argv[i], argv[i], &plan);
   }
 
   cleanup(1);
@@ -116,19 +113,19 @@ free_mt(match_t **m)
 static void
 cleanup(int sig)
 {
-  if (mt != NULL) {
-	free_mt(&mt);
-	mt = NULL;
+  if (plan.mt != NULL) {
+	free_mt(&(plan.mt));
+	plan.mt = NULL;
   }
   
-  if (opts != NULL) {
-	free(opts);
-	opts = NULL;
+  if (plan.opt != NULL) {
+	free(plan.opt);
+	plan.opt = NULL;
   }
   
-  if (node_stat != NULL) {
-	free(node_stat);
-	node_stat = NULL;
+  if (plan.stat != NULL) {
+	free(plan.stat);
+	plan.stat = NULL;
   }
   
   if (sig)

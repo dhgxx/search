@@ -2,21 +2,21 @@
 
 #include "search.h"
 
-extern int exec_name(const char *, options_t **, match_t **);
-extern int exec_regex(const char *, options_t **, match_t **);
+extern int exec_name(const char *, plan_t *);
+extern int exec_regex(const char *, plan_t *);
 
-void lookup_options(int, char *[], options_t **, match_t **);
+void lookup_options(int, char *[], plan_t *);
 void display_usage(void);
 void display_version(void);
 
 void
-lookup_options(int argc, char *argv[], options_t **o, match_t **m)
+lookup_options(int argc, char *argv[], plan_t *p)
 {
   int ch;
   static unsigned int opt_empty;
   static unsigned int opt_delete;
-  options_t *opt = *o;
-  match_t *mt = *m;
+  options_t *opt = p->opt;
+  match_t *mt = p->mt;
   
   static struct option longopts[] = {
 	{ "gid",     required_argument, NULL,        2  },
@@ -57,12 +57,12 @@ lookup_options(int argc, char *argv[], options_t **o, match_t **m)
 	case 'n':
 	  bzero(mt->pattern, LINE_MAX);
 	  strncpy(mt->pattern, optarg, LINE_MAX);
-	  opt->exec_func = exec_name;
+	  p->exec_func = exec_name;
 	  break;
 	case 'r':
 	  bzero(mt->pattern, LINE_MAX);
 	  strncpy(mt->pattern, optarg, LINE_MAX);
-	  opt->exec_func = exec_regex;
+	  p->exec_func = exec_regex;
 	  break;
 	case 0:
 	  if (opt_empty == 1)
@@ -95,7 +95,7 @@ lookup_options(int argc, char *argv[], options_t **o, match_t **m)
 		break;
 	  case 'l':
 		opt->n_type = NT_ISLNK;
-		opt->stat_func = lstat; 
+		p->stat_func = lstat; 
 		break;
 	  case 's':
 		opt->n_type = NT_ISSOCK;
@@ -121,7 +121,7 @@ lookup_options(int argc, char *argv[], options_t **o, match_t **m)
 	  opt->flags |= OPT_ICAS;
 	  break;
 	case 'L':
-	  opt->stat_func = stat;
+	  p->stat_func = stat;
 	  break;
 	case 'P':
 	  break;

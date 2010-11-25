@@ -30,26 +30,26 @@
 
 #include "search.h"
 
-static node_t get_type(const char *, options_t **, node_stat_t **);
-static int cook_entry(const char *, const char *, options_t **, match_t **, node_stat_t **);
+static node_t get_type(const char *, plan_t *);
+static int cook_entry(const char *, const char *, plan_t *);
 static int tell_group(const char *, const gid_t);
 static int tell_user(const char *, const uid_t);
 static void dislink(dl_node **);
 static void list_free(DLIST **);
 
-int comp_regex(options_t **, match_t **);
-int exec_regex(const char *, options_t **, match_t **);
-int exec_name(const char *, options_t **, match_t **);
-void walk_through(const char *, const char *, options_t **, match_t **, node_stat_t **);
+int comp_regex(plan_t *);
+int exec_regex(const char *, plan_t *);
+int exec_name(const char *, plan_t *);
+void walk_through(const char *, const char *, plan_t *);
 
 int
-exec_name(const char *d_name, options_t **o, match_t **m)
+exec_name(const char *d_name, plan_t *p)
 {
   int matched;
   unsigned int plen, mflag;
   char *pattern;
-  options_t *opt = *o;
-  match_t *mt = *m;
+  options_t *opt = p->opt;
+  match_t *mt = p->mt;
 
   if (d_name == NULL)
 	return (-1);
@@ -80,15 +80,15 @@ exec_name(const char *d_name, options_t **o, match_t **m)
 }
 
 int
-comp_regex(options_t **o, match_t **m)
+comp_regex(plan_t *p)
 {
   int ret;
   unsigned int plen, mflag;
   char msg[LINE_MAX];
   char *pattern;
   regex_t *fmt;
-  match_t *mt = *m;
-  options_t *opt = *o;
+  match_t *mt = p->mt;
+  options_t *opt = p->opt;
 
   if (opt == NULL)
 	return (-1);
@@ -127,14 +127,14 @@ comp_regex(options_t **o, match_t **m)
 
 
 int
-exec_regex(const char *d_name, options_t **o, match_t **m)
+exec_regex(const char *d_name, plan_t *p)
 {
   int ret, plen, matched;
   char *pattern, msg[LINE_MAX];
   regex_t *fmt;
   regmatch_t pmatch;
-  options_t *opt = *o;
-  match_t *mt = *m;
+  options_t *opt = p->opt;
+  match_t *mt = p->mt;
 
   fmt = &(mt->fmt);
   pattern = mt->pattern;
@@ -164,19 +164,19 @@ exec_regex(const char *d_name, options_t **o, match_t **m)
 }
 
 void
-walk_through(const char *n_name, const char *d_name, options_t **o, match_t **m, node_stat_t **nstat)
+walk_through(const char *n_name, const char *d_name, plan_t *p)
 {
   int ret, nents;
   char *pbase;
   char tmp_buf[MAXPATHLEN];
-  options_t *opt = *o;
-  match_t *mt = *m;
-  node_stat_t *stat = *nstat;
+  options_t *opt = p->opt;
+  match_t *mt = p->mt;
+  node_stat_t *stat = p->stat;
   struct dirent *dir;
   DIR *dirp;
   DLIST *dlist;
   
-  if (get_type(n_name, &opt, &stat) == NT_ERROR) {
+  if (get_type(n_name, p) == NT_ERROR) {
 	(void)fprintf(stderr, "%s: %s: %s\n",
 				  SEARCH_NAME, n_name, strerror(errno));
 	return;
@@ -185,7 +185,7 @@ walk_through(const char *n_name, const char *d_name, options_t **o, match_t **m,
   nents = 0;
   dlist = dl_init();
 
-  ret = cook_entry(n_name, d_name, &opt, &mt, &stat);
+  ret = cook_entry(n_name, d_name, p);
   
   if (stat->type == NT_ISDIR) {
 
@@ -237,7 +237,7 @@ walk_through(const char *n_name, const char *d_name, options_t **o, match_t **m,
 	while (dlist->cur != NULL) {
 	  if (dlist->cur->ent != NULL) {
 		pbase = basename(dlist->cur->ent);
-		walk_through(dlist->cur->ent, pbase, &opt, &mt, &stat);
+		walk_through(dlist->cur->ent, pbase, p);
 	  }
 	  dlist->cur = dlist->cur->next;
 	}
@@ -266,13 +266,13 @@ walk_through(const char *n_name, const char *d_name, options_t **o, match_t **m,
 }
 
 static node_t
-get_type(const char *d_name, options_t **o, node_stat_t **nstat)
+get_type(const char *d_name, plan_t *p)
 {
   static struct stat stbuf;
-  options_t *opt = *o;
-  node_stat_t *stat = *nstat;
+  options_t *opt = p->opt;
+  node_stat_t *stat = p->stat;
   
-  if (opt->stat_func(d_name, &stbuf)  < 0 )
+  if (p->stat_func(d_name, &stbuf)  < 0 )
 	return (NT_ERROR);
   
   stat->empty = 0;
@@ -311,16 +311,16 @@ get_type(const char *d_name, options_t **o, node_stat_t **nstat)
 }
 
 static int
-cook_entry(const char *n_name, const char *d_name, options_t **o, match_t **m, node_stat_t **nstat)
+cook_entry(const char *n_name, const char *d_name, plan_t *p)
 {
   unsigned int found;
-  options_t *opt = *o;
-  match_t *mt = *m;
-  node_stat_t *stat = *nstat;
+  options_t *opt = p->opt;
+  match_t *mt = p->mt;
+  node_stat_t *stat = p->stat;
 
   found = 0;
   
-  if ((0 == opt->exec_func(d_name, &opt, &mt)) &&
+  if ((0 == p->exec_func(d_name, p)) &&
 	  ((opt->n_type == NT_UNKNOWN) ||
 	   (opt->n_type == stat->type))) {
 
