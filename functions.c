@@ -29,6 +29,7 @@
 #include <grp.h>
 
 #include "search.h"
+#include "dlist.h"
 
 static node_t get_type(const char *, plan_t *);
 static int cook_entry(const char *, const char *, plan_t *);

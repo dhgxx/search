@@ -14,14 +14,12 @@ OPT_LIBDIR=		${OPT_DESTDIR}/lib
 OPT_MANDIR=		${OPT_DESTDIR}/man
 
 CC=			cc
-OPT_INC=		-I${OPT_INCDIR}
-OPT_LIB=		-L${OPT_LIBDIR} -lmi
 
 PROG=			search
 MAN=			${PROG}.1
-SRCS=			functions.c options.c search.c
-HDRS=			extern.h search.h
-OBJS=			functions.o options.o search.o
+SRCS=			dlist.c functions.c options.c search.c
+HDRS=			dlist.h extern.h search.h
+OBJS=			dlist.o functions.o options.o search.o
 
 .if defined(CFLAGS)
 MYCFLAGS=		${CFLAGS} -D_${OSNAME}_
