@@ -27,9 +27,9 @@
  *
  */
 
-#include <sys/types.h>
 #include <sys/param.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 
 #include <stdio.h>
 #include <dirent.h>
@@ -42,9 +42,22 @@
 #include <signal.h>
 #include <fnmatch.h>
 #include <locale.h>
+#include <dlist.h>
 
 #define SEARCH_NAME "search"
 #define SEARCH_VERSION "0.4"
+
+#define OPT_NONE  0x0000
+#define OPT_PATH  0x0002
+#define OPT_EMPTY 0x0004
+#define OPT_GID   0x0006
+#define OPT_GRP   0x0008
+#define OPT_UID   0x0020
+#define OPT_USR   0x0040
+#define OPT_XDEV  0x0060
+#define OPT_DEL   0x0080
+#define OPT_SORT  0x0200
+#define OPT_ICAS  0x0400
 
 typedef enum _node_t {
   NT_UNKNOWN = DT_UNKNOWN,
@@ -63,32 +76,23 @@ typedef enum _node_t {
   NT_ERROR = -1
 } node_t;
 
-typedef struct _reg_t {
-  regex_t re_fmt;
-  char re_str[LINE_MAX];
-  int re_cflag;
-} reg_t;
+typedef struct _match_t {
+  regex_t fmt;
+  char pattern[LINE_MAX];
+  unsigned int cflag;
+} match_t;
 
 typedef struct _options_t {
-  const char *prog_name;
-  const char *prog_version;
+  unsigned int flags;
   char path[MAXPATHLEN];
   char user[LINE_MAX];
   char group[LINE_MAX];
   node_t n_type;
-  int re_icase;
+#ifndef _OpenBSD_
   __dev_t odev;
-  unsigned int find_path;
-  unsigned int find_empty;
-  unsigned int find_gid;
-  unsigned int find_group;
-  unsigned int find_uid;
-  unsigned int find_user;
-  unsigned int x_dev;
-  unsigned int delete;
-  unsigned int sort;
-  int (*stat_func)(const char *, struct stat *);
-  int (*exec_func)(const char *, reg_t *);
+#else
+  dev_t odev;
+#endif
 } options_t;
 
 typedef struct _node_stat_t {
@@ -96,11 +100,19 @@ typedef struct _node_stat_t {
   unsigned int empty;
   uid_t uid;
   gid_t gid;
+#ifndef _OpenBSD_
   __dev_t dev;
+#else
+  dev_t dev;
+#endif
 } node_stat_t;
 
-reg_t *rep;
-options_t *opts;
-node_stat_t *node_stat;
+typedef struct _plan_t {
+  node_stat_t *stat;
+  options_t *opt;
+  match_t *mt;
+  int (*stat_func)(const char *, struct stat *);
+  int (*exec_func)(const char *, struct _plan_t *);
+} plan_t;
 
 #endif	/* _SEARCH_H_ */

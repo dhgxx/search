@@ -27,12 +27,12 @@
  *
  */
 
-extern void lookup_option(int, char **);
-extern void comp_regex(reg_t *);
-extern int exec_regex(const char *, reg_t *);
-extern int exec_name(const char *, reg_t *);
-extern void free_regex(reg_t *);
-extern void walk_through(const char *, const char *);
+extern void lookup_options(int, char *[], plan_t *);
+extern int comp_regex(plan_t *);
+extern int exec_regex(const char *, plan_t *);
+extern int exec_name(const char *, plan_t *);
+extern void walk_through(const char *, const char *, plan_t *);
 extern void display_usage(void);
+extern void display_version(void);
 
 #endif	/* _EXTERN_H_ */

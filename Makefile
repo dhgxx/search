@@ -19,9 +19,9 @@ OPT_LIB=		-L${OPT_LIBDIR} -lmi
 
 PROG=			search
 MAN=			${PROG}.1
-SRCS=			functions.c search.c
-HDRS=			search.h
-OBJS=			functions.o search.o
+SRCS=			functions.c options.c search.c
+HDRS=			extern.h search.h
+OBJS=			functions.o options.o search.o
 
 .if defined(CFLAGS)
 MYCFLAGS=		${CFLAGS} -D_${OSNAME}_
