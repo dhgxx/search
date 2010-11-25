@@ -27,9 +27,10 @@
 #include "search.h"
 #include "extern.h"
 
+plan_t plan;
+
+static void free_mt(match_t **);
 static void cleanup(int);
-static void deldir(DLIST *);
-static void dislink(DLIST *);
 
 int
 main(int argc, char *argv[])
@@ -39,150 +40,94 @@ main(int argc, char *argv[])
   extern int optind;
   
   int i;
-  struct stat *stbuf;
+  static struct stat *stbuf;
   
   (void)setlocale(LC_CTYPE, "");
   signal(SIGINT, cleanup);
   
-  rep = (reg_t *)malloc(sizeof(reg_t));
-  opts = (options_t *)malloc(sizeof(options_t));
-  node_stat = (node_stat_t *)malloc(sizeof(node_stat_t));
+  plan.opt = (options_t *)malloc(sizeof(options_t));
+  plan.mt = (match_t *)malloc(sizeof(match_t));
+  plan.stat = (node_stat_t *)malloc(sizeof(node_stat_t));
   
-  if (rep == NULL ||
-	  opts == NULL ||
-	  node_stat == NULL) {
+  if (plan.opt == NULL ||
+	  plan.mt == NULL ||
+	  plan.stat == NULL) {
 	(void)fprintf(stderr, "%s: malloc(3): %s.\n",
 				  SEARCH_NAME, strerror(errno));
-	exit(0);
+	cleanup(1);
+	exit(1);
   }
 
-  opts->prog_name = SEARCH_NAME;
-  opts->prog_version = SEARCH_VERSION;
-  opts->n_type = 0;
-  opts->stat_func = lstat;
-  opts->exec_func = NULL;
-  opts->find_path = 0;
-  opts->find_empty = 0;
-  opts->find_group = 0;
-  opts->find_user = 0;
-  opts->delete = 0;
-  opts->sort = 0;
-  opts->x_dev = 0;
-  opts->odev = 0;
+  plan.opt->n_type = NT_UNKNOWN;
+  plan.stat_func = lstat;
+  plan.exec_func = exec_name;
+  plan.opt->odev = 0;
+  plan.opt->flags = OPT_NONE;
+  bzero(plan.opt->path, MAXPATHLEN);
+  bzero(plan.mt->pattern, LINE_MAX);
   
-  bzero(opts->path, MAXPATHLEN);
-  bzero(rep->re_str, LINE_MAX);
-  rep->re_cflag =  REG_BASIC;
-  
-  lookup_option(argc, argv);
+  lookup_options(argc, argv, &plan);
   
   argc -= optind;
   argv += optind;
 
-  if (opts->delete == 1) {
-	drm = dl_init();
-	frm = dl_init();
-  }
-  
-  if (argc == 0 &&
-	  opts->find_path == 0)
+  if ((argc == 0) &&
+	  (OPT_PATH != (plan.opt->flags & OPT_PATH)))
 	display_usage();
-
-  if (opts->exec_func == NULL)
-	opts->exec_func = exec_name;
   
-  comp_regex(rep);
+  if (comp_regex(&plan) < 0) {
+	cleanup (1);
+	exit (1);
+  }
 
-  if (opts->find_path == 1) {
-	walk_through(opts->path, opts->path);
+  if (plan.opt->flags & OPT_PATH) {
+	walk_through(plan.opt->path, plan.opt->path, &plan);
   }
 
   if (argc > 0) {
 	for (i = 0; i < argc && argv[i]; i++)
-	  walk_through(argv[i], argv[i]);
+	  walk_through(argv[i], argv[i], &plan);
   }
 
-  if (!dl_empty(frm)) {
-	dislink(frm);
-  }
-  if (!dl_empty(drm)) {
-	deldir(drm);
-  }
-
-  if (opts->delete == 1) {
-	dl_free(&drm);
-	drm = NULL;
-	dl_free(&frm);
-	frm = NULL;
-  }
-
-  free_regex(rep);
-  rep = NULL;
-  free(opts);
-  opts = NULL;
-  free(node_stat);
-  node_stat = NULL;
-
+  cleanup(1);
   exit(0);
+}
+
+static void
+free_mt(match_t **m)
+{
+  match_t *mt = *m;
+
+  if (mt == NULL)
+	return;
+
+  if (&(mt->fmt) != NULL) {
+	regfree(&(mt->fmt));
+  }
+  
+  free(mt);
+  mt = NULL;
+  return;
 }
 
 static void
 cleanup(int sig)
 {
-#ifdef _DEBUG_
-  (void)fprintf(stderr, "\nUser interrupted, cleaning up...\n");
-#endif
-  (void)fprintf(stderr, "\n");
-  
-  if (rep != NULL) {
-	free_regex(rep);
-	rep = NULL;
+  if (plan.mt != NULL) {
+	free_mt(&(plan.mt));
+	plan.mt = NULL;
   }
   
-  if (opts != NULL) {
-	free(opts);
-	opts = NULL;
+  if (plan.opt != NULL) {
+	free(plan.opt);
+	plan.opt = NULL;
   }
   
-  if (node_stat != NULL) {
-	free(node_stat);
-	node_stat = NULL;
+  if (plan.stat != NULL) {
+	free(plan.stat);
+	plan.stat = NULL;
   }
   
   if (sig)
-	exit(1);
-}
-
-static void
-deldir(DLIST *dp)
-{  
-  if (dp == NULL)
-	return;
-  if (dl_empty(dp))
-	return;
-
-  dp->cur = dp->head;
-  while (dp->cur != NULL) {
-	if (rmdir(dp->cur->node) < 0)
-	  (void)fprintf(stderr, "%s: --rmdir(%s): %s\n",
-					opts->prog_name, dp->cur->node, strerror(errno));
-	dp->cur = dp->cur->next;
-  }
-}
-
-static void
-dislink(DLIST *dp)
-{
-  if (dp == NULL)
-	return;
-  if (dl_empty(dp))
-	return;
-
-  dp->cur = dp->head;
-  while (dp->cur != NULL) {
-	if (unlink(dp->cur->node) < 0)
-	  (void)fprintf(stderr, "%s: --unlink(%s): %s\n",
-					opts->prog_name, dp->cur->node, strerror(errno));
-	dp->cur = dp->cur->next;
-  }
+	exit(0);
 }
