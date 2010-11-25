@@ -87,7 +87,7 @@ typedef struct _options_t {
   char path[MAXPATHLEN];
   char user[LINE_MAX];
   char group[LINE_MAX];
-  node_t n_type;
+  node_t o_type;
 #ifndef _OpenBSD_
   __dev_t odev;
 #else

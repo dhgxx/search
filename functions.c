@@ -30,6 +30,8 @@
 
 #include "search.h"
 
+static unsigned int delete;
+
 static node_t get_type(const char *, plan_t *);
 static int cook_entry(const char *, const char *, plan_t *);
 static int tell_group(const char *, const gid_t);
@@ -166,7 +168,8 @@ exec_regex(const char *d_name, plan_t *p)
 void
 walk_through(const char *n_name, const char *d_name, plan_t *p)
 {
-  int ret, nents;
+  int ret;
+  unsigned int nents, del_stat;
   char *pbase;
   char tmp_buf[MAXPATHLEN];
   options_t *opt = p->opt;
@@ -183,14 +186,17 @@ walk_through(const char *n_name, const char *d_name, plan_t *p)
   }
 
   nents = 0;
+  delete = 0;
   dlist = dl_init();
-
-  ret = cook_entry(n_name, d_name, p);
   
+  ret = cook_entry(n_name, d_name, p);
+  if (opt->flags & OPT_DEL)
+	if (ret == 0)
+	  delete = 1;
+
   if (stat->type == NT_ISDIR) {
 
 	if (opt->flags & OPT_XDEV) {
-	  
 	  if (opt->odev == 0) {
 		opt->odev = stat->dev;
 #ifdef _DEBUG_
@@ -198,13 +204,12 @@ walk_through(const char *n_name, const char *d_name, plan_t *p)
 					  d_name, stat->dev, opt->odev);
 #endif
 	  }
-	  
 	  if (stat->dev != opt->odev) {
 		list_free(&dlist);
 		return;
 	  }
 	}
-	
+
 	if (NULL == (dirp = opendir(n_name))) {
 	  (void)fprintf(stderr,
 					"%s: %s: %s\n",
@@ -224,8 +229,12 @@ walk_through(const char *n_name, const char *d_name, plan_t *p)
 		strncat(tmp_buf, dir->d_name, MAXPATHLEN);
 		dl_append(tmp_buf, &dlist);
 		if (opt->flags & OPT_DEL) {
-		  if (ret == 0)
+		  if (delete == 1) {
+#ifdef _DEBUG_
+			(void)fprintf(stderr, "%s: to be deleted.\n", dlist->cur->ent);
+#endif
 			dlist->cur->deleted = 1;
+		  }
 		}
 	  }
 	}
@@ -241,28 +250,17 @@ walk_through(const char *n_name, const char *d_name, plan_t *p)
 	  }
 	  dlist->cur = dlist->cur->next;
 	}
-
-	/* whether or not the dir is empty. */
-	if (opt->flags & OPT_EMPTY) {
-	  if (nents == 0)
-		ret = 0;
-	}
-
+	
 	closedir(dirp);
   }
 
   if (opt->flags & OPT_DEL) {
-	if (ret == 0)
-	  if ((0 != strncmp(n_name, ".", strlen(n_name) + 1)) &&
-		  (0 != strncmp(n_name, "..", strlen(n_name) + 1))) {
-		dl_append(n_name, &dlist);
-		dlist->cur->deleted = 1;
-	  }
+	delete = 0;
 	dl_foreach(&dlist, dislink);
   }
-
+  
   list_free(&dlist);
-  return;
+  return;	
 }
 
 static node_t
@@ -321,8 +319,8 @@ cook_entry(const char *n_name, const char *d_name, plan_t *p)
   found = 0;
   
   if ((0 == p->exec_func(d_name, p)) &&
-	  ((opt->n_type == NT_UNKNOWN) ||
-	   (opt->n_type == stat->type))) {
+	  ((opt->o_type == NT_UNKNOWN) ||
+	   (opt->o_type == stat->type))) {
 
 	found = 1;
 	
@@ -423,24 +421,20 @@ dislink(dl_node **n)
 	return;
 
   if (np->deleted == 1) {
-	
+#ifdef _DEBUG_
+	(void)fprintf(stderr, "%s: in delete list.\n", np->ent);
+#endif
 	stat(np->ent, &stbuf);
 	
 	if(S_ISDIR(stbuf.st_mode)) {
 	  ret = rmdir(np->ent);
 	  if (ret < 0) {
-		if (errno == ENOTEMPTY)
-		  return;
-		if (errno == ENOENT)
-		  return;
 		(void)fprintf(stderr, "%s: --rmdir(%s): %s\n",
 					  SEARCH_NAME, np->ent, strerror(errno));
 	  }
 	} else {
 	  ret = unlink(np->ent);
 	  if (ret < 0) {
-		if (errno == ENOENT)
-		  return;
 		(void)fprintf(stderr, "%s: --unlink(%s): %s\n",
 					  SEARCH_NAME, np->ent, strerror(errno));
 	  }

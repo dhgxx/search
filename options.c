@@ -82,32 +82,32 @@ lookup_options(int argc, char *argv[], plan_t *p)
 	case 't':
 	  switch (optarg[0]) {
 	  case 'f':
-		opt->n_type = NT_ISFIFO;
+		opt->o_type = NT_ISFIFO;
 		break;
 	  case 'c':
-		opt->n_type = NT_ISCHR;
+		opt->o_type = NT_ISCHR;
 		break;
 	  case 'd':
-		opt->n_type = NT_ISDIR;
+		opt->o_type = NT_ISDIR;
 		break;
 	  case 'b':
-		opt->n_type = NT_ISBLK;
+		opt->o_type = NT_ISBLK;
 		break;
 	  case 'l':
-		opt->n_type = NT_ISLNK;
+		opt->o_type = NT_ISLNK;
 		p->stat_func = lstat; 
 		break;
 	  case 's':
-		opt->n_type = NT_ISSOCK;
+		opt->o_type = NT_ISSOCK;
 		break;
 #ifndef _OpenBSD_
 	  case 'w':
-		opt->n_type = NT_ISWHT;
+		opt->o_type = NT_ISWHT;
 		break;
 #endif
 	  case 'r':
 	  case '\0':
-		opt->n_type = NT_ISREG;
+		opt->o_type = NT_ISREG;
 		break;
 	  default:
 		display_usage();
