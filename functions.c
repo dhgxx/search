@@ -68,13 +68,13 @@ exec_name(const char *d_name, plan_t *p)
   if (p->opt->flags & OPT_ICAS) {
 	mflag = FNM_CASEFOLD | FNM_PERIOD | FNM_PATHNAME | FNM_NOESCAPE;
   }
-  
+
 #ifdef _DEBUG_
-  (void)fprintf(stderr,	"pattern=%s, name=%s\n",
-				pattern, d_name);
+  (void)fprintf(stderr,	"%s: exec_name: pattern=%s, name=%s\n",
+				SEARCH_NAME, pattern, d_name);
 #endif
+  
   matched = fnmatch(pattern, d_name, mflag);
-    
   return ((matched == 0) ? (0) : (-1));
 }
 
@@ -162,6 +162,11 @@ exec_regex(const char *d_name, plan_t *p)
 	regfree(fmt);
 	return (-1);
   }
+
+#ifdef _DEBUG_
+  (void)fprintf(stderr, "%s: exec_regex: pattern=%s, name=%s\n",
+				SEARCH_NAME, pattern, d_name);
+#endif
   
   matched = ((ret == 0) && (pmatch.rm_so == 0) && (pmatch.rm_eo == plen));
   return ((matched == 1) ? (0) : (-1));
@@ -208,8 +213,8 @@ walk_through(const char *n_name, const char *d_name, plan_t *p)
 	  if (p->opt->odev == 0) {
 		p->opt->odev = p->stat->dev;
 #ifdef _DEBUG_
-		(void)fprintf(stderr, "%s (dev=%d, odev=%d)\n",
-					  d_name, p->stat->dev, p->opt->odev);
+		(void)fprintf(stderr, "%s: walk_through: d_name=%s (dev=%d, odev=%d)\n",
+					  SEARCH_NAME, d_name, p->stat->dev, p->opt->odev);
 #endif
 	  }
 	  if (p->stat->dev != p->opt->odev) {
@@ -275,8 +280,13 @@ out(const char *s, plan_t *p)
 	return;
   if (p->opt == NULL)
 	return;
-  if (p->opt->flags & OPT_DEL)
+  if (p->opt->flags & OPT_DEL) {
+#ifdef _DEBUG_
+	(void)fprintf(stderr, "%s: out(%s): to be deleted.\n",
+				  SEARCH_NAME, s);
+#endif
 	return;
+  }
   
   (void)fprintf(stdout, "%s\n", s);
   return;
@@ -325,7 +335,8 @@ get_type(const char *d_name, plan_t *p)
 	if (stbuf.st_size == 0) {
 	  p->stat->empty = 1;
 #ifdef _DEBUG_
-	  (void)fprintf(stderr, "%s: empty file.\n", d_name);
+	  (void)fprintf(stderr, "%s: cook_entry(%s): empty file.\n",
+					SEARCH_NAME, d_name);
 #endif
 	}
   }
@@ -438,11 +449,13 @@ dislink(dl_node **n)
 	return;
 
   if (np->deleted == 1) {
+
 #ifdef _DEBUG_
-	(void)fprintf(stderr, "%s: in delete list.\n", np->ent);
+	(void)fprintf(stderr, "%s: dislink(%s): to be deleted.\n",
+				  SEARCH_NAME, np->ent);
 #endif
-	stat(np->ent, &stbuf);
 	
+	stat(np->ent, &stbuf);
 	if(S_ISDIR(stbuf.st_mode)) {
 	  ret = rmdir(np->ent);
 	  if (ret < 0) {
