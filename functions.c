@@ -30,8 +30,7 @@
 
 #include "search.h"
 
-static unsigned int delete;
-
+static void out(const char *, plan_t *);
 static node_t get_type(const char *, plan_t *);
 static int cook_entry(const char *, const char *, plan_t *);
 static int tell_group(const char *, const gid_t);
@@ -50,25 +49,23 @@ exec_name(const char *d_name, plan_t *p)
   int matched;
   unsigned int plen, mflag;
   char *pattern;
-  options_t *opt = p->opt;
-  match_t *mt = p->mt;
 
   if (d_name == NULL)
 	return (-1);
-  if (opt == NULL)
+  if (p == NULL)
 	return (-1);
-  if (mt == NULL)
+  if (p->mt == NULL)
 	return (-1);
   
   mflag = 0;
-  pattern = mt->pattern;
+  pattern = p->mt->pattern;
   plen = strlen(pattern);
   matched = FNM_NOMATCH;
   
   if (plen == 0)
 	pattern = "*";
   
-  if (opt->flags & OPT_ICAS) {
+  if (p->opt->flags & OPT_ICAS) {
 	mflag = FNM_CASEFOLD | FNM_PERIOD | FNM_PATHNAME | FNM_NOESCAPE;
   }
   
@@ -88,28 +85,28 @@ comp_regex(plan_t *p)
   unsigned int plen, mflag;
   char msg[LINE_MAX];
   char *pattern;
-  regex_t *fmt;
-  match_t *mt = p->mt;
-  options_t *opt = p->opt;
+  static regex_t *fmt;
 
-  if (opt == NULL)
+  if (p == NULL)
 	return (-1);
-  if (mt == NULL)
+  if (p->opt == NULL)
+	return (-1);
+  if (p->mt == NULL)
 	return (-1);
   
   mflag = REG_BASIC;
-  plen = strlen(mt->pattern);
-  if (opt->flags & OPT_ICAS)
+  plen = strlen(p->mt->pattern);
+  if (p->opt->flags & OPT_ICAS)
 	mflag |= REG_ICASE;
     
   bzero(msg, LINE_MAX);
-  fmt = &(mt->fmt);
+  fmt = &(p->mt->fmt);
 
   /* defaults to search all types. */
   if (plen == 0)
 	pattern = ".*";
   else
-	pattern = mt->pattern;
+	pattern = p->mt->pattern;
 
   ret = regcomp(fmt, pattern, mflag);
 
@@ -133,13 +130,18 @@ exec_regex(const char *d_name, plan_t *p)
 {
   int ret, plen, matched;
   char *pattern, msg[LINE_MAX];
-  regex_t *fmt;
+  static regex_t *fmt;
   regmatch_t pmatch;
-  options_t *opt = p->opt;
-  match_t *mt = p->mt;
 
-  fmt = &(mt->fmt);
-  pattern = mt->pattern;
+  if (d_name == NULL)
+	return (-1);
+  if (p == NULL)
+	return (-1);
+  if (p->mt == NULL)
+	return (-1);
+
+  fmt = &(p->mt->fmt);
+  pattern = p->mt->pattern;
   plen = strlen(d_name);
   
   bzero(msg, LINE_MAX);
@@ -169,16 +171,23 @@ void
 walk_through(const char *n_name, const char *d_name, plan_t *p)
 {
   int ret;
-  unsigned int nents, del_stat;
-  char *pbase;
-  char tmp_buf[MAXPATHLEN];
-  options_t *opt = p->opt;
-  match_t *mt = p->mt;
-  node_stat_t *stat = p->stat;
-  struct dirent *dir;
+  unsigned int nents;
+  char *pbase, tmp_buf[MAXPATHLEN];
+  static struct dirent *dir;
   DIR *dirp;
   DLIST *dlist;
-  
+
+  if (n_name == NULL)
+	return;
+  if (d_name == NULL)
+	return;
+  if (p == NULL)
+	return;
+  if (p->opt == NULL)
+	return;
+  if (p->stat == NULL)
+	return;
+    
   if (get_type(n_name, p) == NT_ERROR) {
 	(void)fprintf(stderr, "%s: %s: %s\n",
 				  SEARCH_NAME, n_name, strerror(errno));
@@ -186,33 +195,31 @@ walk_through(const char *n_name, const char *d_name, plan_t *p)
   }
 
   nents = 0;
-  delete = 0;
   dlist = dl_init();
   
   ret = cook_entry(n_name, d_name, p);
-  if (opt->flags & OPT_DEL)
-	if (ret == 0)
-	  delete = 1;
 
-  if (stat->type == NT_ISDIR) {
+  if (ret == 0)
+	out(n_name, p);
+  
+  if (p->stat->type == NT_ISDIR) {
 
-	if (opt->flags & OPT_XDEV) {
-	  if (opt->odev == 0) {
-		opt->odev = stat->dev;
+	if (p->opt->flags & OPT_XDEV) {
+	  if (p->opt->odev == 0) {
+		p->opt->odev = p->stat->dev;
 #ifdef _DEBUG_
 		(void)fprintf(stderr, "%s (dev=%d, odev=%d)\n",
-					  d_name, stat->dev, opt->odev);
+					  d_name, p->stat->dev, p->opt->odev);
 #endif
 	  }
-	  if (stat->dev != opt->odev) {
+	  if (p->stat->dev != p->opt->odev) {
 		list_free(&dlist);
 		return;
 	  }
 	}
 
 	if (NULL == (dirp = opendir(n_name))) {
-	  (void)fprintf(stderr,
-					"%s: %s: %s\n",
+	  (void)fprintf(stderr,	"%s: %s: %s\n",
 					SEARCH_NAME, n_name, strerror(errno));
 	  list_free(&dlist);
 	  return;
@@ -228,20 +235,21 @@ walk_through(const char *n_name, const char *d_name, plan_t *p)
 		  strncat(tmp_buf, "/", MAXPATHLEN);
 		strncat(tmp_buf, dir->d_name, MAXPATHLEN);
 		dl_append(tmp_buf, &dlist);
-		if (opt->flags & OPT_DEL) {
-		  if (delete == 1) {
-#ifdef _DEBUG_
-			(void)fprintf(stderr, "%s: to be deleted.\n", dlist->cur->ent);
-#endif
-			dlist->cur->deleted = 1;
-		  }
-		}
 	  }
 	}
-	
-	if (opt->flags & OPT_SORT)
-	  dl_sort(&dlist);
 
+	/* We have to count dir entries before */
+	/* we can tell if or not a directory is */
+	/* empty. If it's empty, then display it. */
+	if (p->opt->flags & OPT_EMPTY) {
+	  if (nents == 0)
+		out(n_name, p);
+	}
+
+	/* Sort the search result if */
+	/* necessary. */
+	if (p->opt->flags & OPT_SORT)
+	  dl_sort(&dlist);
 	dlist->cur = dlist->head;
 	while (dlist->cur != NULL) {
 	  if (dlist->cur->ent != NULL) {
@@ -253,52 +261,69 @@ walk_through(const char *n_name, const char *d_name, plan_t *p)
 	
 	closedir(dirp);
   }
-
-  if (opt->flags & OPT_DEL) {
-	delete = 0;
-	dl_foreach(&dlist, dislink);
-  }
   
   list_free(&dlist);
   return;	
+}
+
+static void
+out(const char *s, plan_t *p)
+{
+  if (s == NULL)
+	return;
+  if (p == NULL)
+	return;
+  if (p->opt == NULL)
+	return;
+  if (p->opt->flags & OPT_DEL)
+	return;
+  
+  (void)fprintf(stdout, "%s\n", s);
+  return;
 }
 
 static node_t
 get_type(const char *d_name, plan_t *p)
 {
   static struct stat stbuf;
-  options_t *opt = p->opt;
-  node_stat_t *stat = p->stat;
-  
+
+  if (d_name == NULL)
+	return (NT_ERROR);
+  if (p == NULL)
+	return (NT_ERROR);
+  if (p->opt == NULL)
+	return (NT_ERROR);
+  if (p->stat == NULL)
+	return (NT_ERROR);
   if (p->stat_func(d_name, &stbuf)  < 0 )
 	return (NT_ERROR);
   
-  stat->empty = 0;
-  stat->gid = stbuf.st_gid;
-  stat->uid = stbuf.st_uid;
-  stat->dev = stbuf.st_dev;
+  p->stat->empty = 0;
+  p->stat->gid = stbuf.st_gid;
+  p->stat->uid = stbuf.st_uid;
+  p->stat->dev = stbuf.st_dev;
 
   if (S_ISBLK(stbuf.st_mode))
-	stat->type = NT_ISBLK;
+	p->stat->type = NT_ISBLK;
   if (S_ISCHR(stbuf.st_mode))
-	stat->type = NT_ISCHR;
+	p->stat->type = NT_ISCHR;
   if (S_ISDIR(stbuf.st_mode))
-	stat->type = NT_ISDIR;
+	p->stat->type = NT_ISDIR;
   if (S_ISFIFO(stbuf.st_mode))
-	stat->type = NT_ISFIFO;
+	p->stat->type = NT_ISFIFO;
   if (S_ISLNK(stbuf.st_mode))
-	stat->type = NT_ISLNK;
+	p->stat->type = NT_ISLNK;
   if (S_ISREG(stbuf.st_mode))
-	stat->type = NT_ISREG;
+	p->stat->type = NT_ISREG;
   if (S_ISSOCK(stbuf.st_mode))
-	stat->type = NT_ISSOCK;
+	p->stat->type = NT_ISSOCK;
 #ifndef _OpenBSD_
   if (S_ISWHT(stbuf.st_mode))
-	stat->type = NT_ISWHT;
+	p->stat->type = NT_ISWHT;
 #endif
-  if (stat->type != NT_ISDIR) {
+  if (p->stat->type != NT_ISDIR) {
 	if (stbuf.st_size == 0) {
-	  stat->empty = 1;
+	  p->stat->empty = 1;
 #ifdef _DEBUG_
 	  (void)fprintf(stderr, "%s: empty file.\n", d_name);
 #endif
@@ -312,36 +337,28 @@ static int
 cook_entry(const char *n_name, const char *d_name, plan_t *p)
 {
   unsigned int found;
-  options_t *opt = p->opt;
-  match_t *mt = p->mt;
-  node_stat_t *stat = p->stat;
 
   found = 0;
   
   if ((0 == p->exec_func(d_name, p)) &&
-	  ((opt->o_type == NT_UNKNOWN) ||
-	   (opt->o_type == stat->type))) {
+	  ((p->opt->o_type == NT_UNKNOWN) ||
+	   (p->opt->o_type == p->stat->type))) {
 
 	found = 1;
 	
-	if (opt->flags & OPT_EMPTY) {
-	  if (stat->empty != 1)
+	if (p->opt->flags & OPT_EMPTY) {
+	  if (p->stat->empty != 1)
 		found = 0;
 	}
 
-	if (opt->flags & OPT_GRP) {
-	  if (0 != tell_group(opt->group, stat->gid))
+	if (p->opt->flags & OPT_GRP) {
+	  if (0 != tell_group(p->opt->group, p->stat->gid))
 		found = 0;
 	}
 	
-	if (opt->flags & OPT_USR) {
-	  if (0 != tell_user(opt->user, stat->uid))
+	if (p->opt->flags & OPT_USR) {
+	  if (0 != tell_user(p->opt->user, p->stat->uid))
 		found = 0;
-	}
-	
-	if ((found == 1) &&
-		(OPT_DEL != (opt->flags & OPT_DEL))) {
-	  (void)fprintf(stdout, "%s\n", n_name);
 	}
   }
 
@@ -353,7 +370,7 @@ tell_group(const char *sgid, const gid_t gid)
 {
   gid_t id;
   char *p;
-  struct group *grp;
+  static struct group *grp;
   
   if (sgid == NULL)
 	return (-1);
@@ -384,7 +401,7 @@ tell_user(const char *suid, const uid_t uid)
 {
   uid_t id;
   char *p;
-  struct passwd *pwd;
+  static struct passwd *pwd;
 
   if (suid == NULL)
 	return (-1);
