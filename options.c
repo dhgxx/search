@@ -5,6 +5,8 @@
 extern int exec_name(const char *, plan_t *);
 extern int exec_regex(const char *, plan_t *);
 
+static void ftype_err(const char *);
+
 void lookup_options(int, char *[], plan_t *);
 void display_usage(void);
 void display_version(void);
@@ -79,7 +81,7 @@ lookup_options(int argc, char *argv[], plan_t *p)
 	  break;
 	case 't':
 	  switch (optarg[0]) {
-	  case 'f':
+	  case 'p':
 		p->opt->o_type = NT_ISFIFO;
 		break;
 	  case 'c':
@@ -98,17 +100,12 @@ lookup_options(int argc, char *argv[], plan_t *p)
 	  case 's':
 		p->opt->o_type = NT_ISSOCK;
 		break;
-#ifndef _OpenBSD_
-	  case 'w':
-		p->opt->o_type = NT_ISWHT;
-		break;
-#endif
-	  case 'r':
+	  case 'f':
 	  case '\0':
 		p->opt->o_type = NT_ISREG;
 		break;
 	  default:
-		display_usage();
+		ftype_err(optarg);
 		break;
 	  }
 	  break;
@@ -132,15 +129,15 @@ lookup_options(int argc, char *argv[], plan_t *p)
 void
 display_usage(void)
 {  
-  static const char *usage = "usage:\t%s [-EILPsv]\
+  static const char *usage = "usage:\t%s [-EILPsxv]\
  ...\
  [-f|--path ...]\
  [-n|--name ...]\
  [-r|--regex ...]\
  [-t|--type ...]\
  [...]\n\
- \t%s [-EILPsv]\
- -f | --path ...\
+ \t%s [-EILPsxv]\
+ -f|--path ...\
  [...]\
  [-n|--name ...]\
  [-r|--regex ...]\
@@ -157,5 +154,16 @@ display_version(void)
 {  
   (void)fprintf(stderr,	"%s version %s\n",
 				SEARCH_NAME, SEARCH_VERSION);
+  exit (0);
+}
+
+static void
+ftype_err(const char *s)
+{
+  if (s == NULL)
+	return;
+
+  (void)fprintf(stderr, "%s: --type: %s: unknown type\n",
+				SEARCH_NAME, s);
   exit (0);
 }

@@ -175,7 +175,7 @@ exec_regex(const char *d_name, plan_t *p)
 void
 walk_through(const char *n_name, const char *d_name, plan_t *p)
 {
-  int ret;
+  int matched;
   unsigned int nents;
   char *pbase, tmp_buf[MAXPATHLEN];
   static struct dirent *dir;
@@ -202,73 +202,75 @@ walk_through(const char *n_name, const char *d_name, plan_t *p)
   nents = 0;
   dlist = dl_init();
   
-  ret = cook_entry(n_name, d_name, p);
+  matched = cook_entry(n_name, d_name, p);
 
-  if (ret == 0)
+  if (matched)
 	out(n_name, p);
   
-  if (p->stat->type == NT_ISDIR) {
-
-	if (p->opt->flags & OPT_XDEV) {
-	  if (p->opt->odev == 0) {
-		p->opt->odev = p->stat->dev;
-#ifdef _DEBUG_
-		(void)fprintf(stderr, "%s: walk_through: d_name=%s (dev=%d, odev=%d)\n",
-					  SEARCH_NAME, d_name, p->stat->dev, p->opt->odev);
-#endif
-	  }
-	  if (p->stat->dev != p->opt->odev) {
-		list_free(&dlist);
-		return;
-	  }
-	}
-
-	if (NULL == (dirp = opendir(n_name))) {
-	  (void)fprintf(stderr,	"%s: %s: %s\n",
-					SEARCH_NAME, n_name, strerror(errno));
+  if (p->stat->type != NT_ISDIR) {
+	list_free(&dlist);
+	return;
+  }
+	
+  if (p->opt->flags & OPT_XDEV) {
+	if (p->opt->odev == 0)
+	  p->opt->odev = p->stat->dev;
+	if (p->stat->dev != p->opt->odev) {
 	  list_free(&dlist);
 	  return;
 	}
+  }
 
-	while (NULL != (dir = readdir(dirp))) {
-	  if ((0 != strncmp(dir->d_name, ".", strlen(dir->d_name) + 1)) &&
-		  (0 != strncmp(dir->d_name, "..", strlen(dir->d_name) + 1))) {
-		nents++;
-		bzero(tmp_buf, MAXPATHLEN);
-		strncpy(tmp_buf, n_name, MAXPATHLEN);
-		if ('/' != tmp_buf[strlen(tmp_buf) - 1])
-		  strncat(tmp_buf, "/", MAXPATHLEN);
-		strncat(tmp_buf, dir->d_name, MAXPATHLEN);
-		dl_append(tmp_buf, &dlist);
-	  }
-	}
+  if (NULL == (dirp = opendir(n_name))) {
+	(void)fprintf(stderr,	"%s: %s: %s\n",
+				  SEARCH_NAME, n_name, strerror(errno));
+	list_free(&dlist);
+	return;
+  }
 
-	/* We have to count dir entries before */
-	/* we can tell if or not a directory is */
-	/* empty. If it's empty, then display it. */
-	if (p->opt->flags & OPT_EMPTY) {
-	  if (nents == 0)
-		out(n_name, p);
-	}
-
-	/* Sort the search result if */
-	/* necessary. */
-	if (p->opt->flags & OPT_SORT)
-	  dl_sort(&dlist);
-	dlist->cur = dlist->head;
-	while (dlist->cur != NULL) {
-	  if (dlist->cur->ent != NULL) {
-		pbase = basename(dlist->cur->ent);
-		walk_through(dlist->cur->ent, pbase, p);
-	  }
-	  dlist->cur = dlist->cur->next;
-	}
+  while (NULL != (dir = readdir(dirp))) {
 	
-	closedir(dirp);
+	if ((0 == strncmp(dir->d_name, ".", strlen(dir->d_name) + 1)) ||
+		(0 == strncmp(dir->d_name, "..", strlen(dir->d_name) + 1))) {
+	  continue;
+	}
+	  
+	nents++;
+	bzero(tmp_buf, MAXPATHLEN);
+	strncpy(tmp_buf, n_name, MAXPATHLEN);
+	if ('/' != tmp_buf[strlen(tmp_buf) - 1])
+	  strncat(tmp_buf, "/", MAXPATHLEN);
+	strncat(tmp_buf, dir->d_name, MAXPATHLEN);
+	dl_append(tmp_buf, &dlist);
+  }
+
+  /* We have to count dir entries before */
+  /* we can tell if or not a directory is */
+  /* empty. If it's empty, then display it. */
+  if (p->opt->flags & OPT_EMPTY) {
+	if (nents == 0) {
+	  out(n_name, p);
+	  list_free(&dlist);
+	  return;
+	}
+  }
+
+  /* Sort the search result if */
+  /* necessary. */
+  if (p->opt->flags & OPT_SORT)
+	dl_sort(&dlist);
+  dlist->cur = dlist->head;
+  while (dlist->cur != NULL) {
+	if (dlist->cur->ent != NULL) {
+	  pbase = basename(dlist->cur->ent);
+	  walk_through(dlist->cur->ent, pbase, p);
+	}
+	dlist->cur = dlist->cur->next;
   }
   
+  closedir(dirp);  
   list_free(&dlist);
-  return;	
+  return;
 }
 
 static void
@@ -308,7 +310,6 @@ get_type(const char *d_name, plan_t *p)
   if (p->stat_func(d_name, &stbuf)  < 0 )
 	return (NT_ERROR);
   
-  p->stat->empty = 0;
   p->stat->gid = stbuf.st_gid;
   p->stat->uid = stbuf.st_uid;
   p->stat->dev = stbuf.st_dev;
@@ -327,19 +328,11 @@ get_type(const char *d_name, plan_t *p)
 	p->stat->type = NT_ISREG;
   if (S_ISSOCK(stbuf.st_mode))
 	p->stat->type = NT_ISSOCK;
-#ifndef _OpenBSD_
-  if (S_ISWHT(stbuf.st_mode))
-	p->stat->type = NT_ISWHT;
-#endif
-  if (p->stat->type != NT_ISDIR) {
-	if (stbuf.st_size == 0) {
-	  p->stat->empty = 1;
-#ifdef _DEBUG_
-	  (void)fprintf(stderr, "%s: cook_entry(%s): empty file.\n",
-					SEARCH_NAME, d_name);
-#endif
-	}
-  }
+  
+  if (stbuf.st_size == 0)
+	p->stat->empty = 1;
+  else
+	p->stat->empty = 0;
   
   return (NT_UNKNOWN);
 }
@@ -358,7 +351,7 @@ cook_entry(const char *n_name, const char *d_name, plan_t *p)
 	found = 1;
 	
 	if (p->opt->flags & OPT_EMPTY) {
-	  if (p->stat->empty != 1)
+	  if (!(p->stat->empty))
 		found = 0;
 	}
 
@@ -373,7 +366,7 @@ cook_entry(const char *n_name, const char *d_name, plan_t *p)
 	}
   }
 
-  return (found == 1 ? (0) : (-1));
+  return (found);
 }
 
 static int
