@@ -13,7 +13,6 @@ OPT_INCDIR=		${OPT_DESTDIR}/include
 OPT_LIBDIR=		${OPT_DESTDIR}/lib
 OPT_MANDIR=		${OPT_DESTDIR}/man
 
-CC=			cc
 OPT_INC=		-I${OPT_INCDIR}
 OPT_LIB=		-L${OPT_LIBDIR} -lmi
 
@@ -37,11 +36,13 @@ STRIP=			-s
 .endif
 
 .if ${OSNAME} == "FreeBSD"
+CC=			clang
 BINGRP=			wheel
 MFILE=			${MAN}.gz
 MANDIR=			${OPT_MANDIR}/man1
 MKWHATIS=		/usr/bin/makewhatis
 .elif ${OSNAME} == "OpenBSD"
+CC=			cc
 BINGRP=			bin
 MFILE=			${MAN:S/.1$/.cat0/g}
 MANDIR=			${OPT_MANDIR}/cat1

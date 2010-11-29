@@ -58,7 +58,7 @@ main(int argc, char *argv[])
 	exit(1);
   }
 
-  plan.opt->n_type = NT_UNKNOWN;
+  plan.opt->o_type = NT_UNKNOWN;
   plan.stat_func = lstat;
   plan.exec_func = exec_name;
   plan.opt->odev = 0;

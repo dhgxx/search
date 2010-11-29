@@ -8,7 +8,7 @@
 .Pp
 .Nm
 .Op Fl L | Fl P
-.Op Fl EIsvx
+.Op Fl EIsxv
 .Ar path ...
 .Op Fl f Ar path
 .Op Fl n Ar pattern
@@ -18,7 +18,7 @@
 .Pp
 .Nm
 .Op Fl L | Fl P
-.Op Fl EIsvx
+.Op Fl EIsxv
 .Fl f Ar path
 .Op path ...
 .Op Fl n Ar pattern
@@ -54,14 +54,14 @@ to alphabetically sort the search results. Note:
 .Ql search -s
 has identical output as
 .Ql search | sort .
-.It Fl v
-Show version number
 .It Fl x
 Prevents
 .Nm
 from descending into directories that have a device
 number different than that of the file from which
 the descent began.
+.It Fl v
+Show version number
 .It Fl n Ar pattern
 Specify a
 .Ar pattern
@@ -93,16 +93,14 @@ block device
 character special
 .It Cm d
 directory
-.It Cm f
+.It Cm p
 fifo
 .It Cm l
 symbolic link
-.It Cm r
+.It Cm f
 regular file
 .It Cm s
 socket
-.It Cm w
-white out (OpenBSD doesn't have this)
 .El
 .El
 .Pp
