@@ -11,8 +11,6 @@ OPT_DESTDIR=		/opt/local
 OPT_BINDIR=		${OPT_DESTDIR}/bin
 OPT_MANDIR=		${OPT_DESTDIR}/man
 
-CC=			cc
-
 PROG=			search
 MAN=			${PROG}.1
 SRCS=			dlist.c functions.c options.c search.c
@@ -33,11 +31,13 @@ STRIP=			-s
 .endif
 
 .if ${OSNAME} == "FreeBSD"
+CC=			clang
 BINGRP=			wheel
 MFILE=			${MAN}.gz
 MANDIR=			${OPT_MANDIR}/man1
 MKWHATIS=		/usr/bin/makewhatis
 .elif ${OSNAME} == "OpenBSD"
+CC=			cc
 BINGRP=			bin
 MFILE=			${MAN:S/.1$/.cat0/g}
 MANDIR=			${OPT_MANDIR}/cat1

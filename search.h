@@ -49,11 +49,9 @@
 #define OPT_NONE  0x0000
 #define OPT_PATH  0x0002
 #define OPT_EMPTY 0x0004
-#define OPT_GID   0x0006
 #define OPT_GRP   0x0008
-#define OPT_UID   0x0020
-#define OPT_USR   0x0040
-#define OPT_XDEV  0x0060
+#define OPT_USR   0x0020
+#define OPT_XDEV  0x0040
 #define OPT_DEL   0x0080
 #define OPT_SORT  0x0200
 #define OPT_ICAS  0x0400
@@ -67,11 +65,6 @@ typedef enum _node_t {
   NT_ISREG = DT_REG,
   NT_ISLNK = DT_LNK,
   NT_ISSOCK = DT_SOCK,
-#ifndef _OpenBSD_
-  NT_ISWHT = DT_WHT,
-#endif
-  NT_ISUSR = 18,
-  NT_ISGRP = 20,
   NT_ERROR = -1
 } node_t;
 
@@ -86,12 +79,8 @@ typedef struct _options_t {
   char path[MAXPATHLEN];
   char user[LINE_MAX];
   char group[LINE_MAX];
-  node_t n_type;
-#ifndef _OpenBSD_
-  __dev_t odev;
-#else
+  node_t o_type;
   dev_t odev;
-#endif
 } options_t;
 
 typedef struct _node_stat_t {
@@ -99,11 +88,7 @@ typedef struct _node_stat_t {
   unsigned int empty;
   uid_t uid;
   gid_t gid;
-#ifndef _OpenBSD_
-  __dev_t dev;
-#else
   dev_t dev;
-#endif
 } node_stat_t;
 
 typedef struct _plan_t {
