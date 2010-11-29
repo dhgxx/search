@@ -30,13 +30,15 @@
 
 #include "search.h"
 
-static void out(const char *, plan_t *);
+static unsigned int delete = 0;
+
+static void out(const char *);
 static node_t get_type(const char *, plan_t *);
 static int cook_entry(const char *, const char *, plan_t *);
 static int tell_group(const char *, const gid_t);
 static int tell_user(const char *, const uid_t);
-static void dislink(dl_node **);
-static void list_free(DLIST **);
+static void dislink(const char *);
+static void list_clear(DLIST **);
 
 int comp_regex(plan_t *);
 int exec_regex(const char *, plan_t *);
@@ -204,19 +206,25 @@ walk_through(const char *n_name, const char *d_name, plan_t *p)
   
   matched = cook_entry(n_name, d_name, p);
 
-  if (matched)
-	out(n_name, p);
+  if (matched) {
+	if (!(p->opt->flags & OPT_DEL))
+	  out(n_name);
+	else
+	  delete = 1;
+  }
   
   if (p->stat->type != NT_ISDIR) {
-	list_free(&dlist);
+	if (delete)
+	  dislink(n_name);
+	list_clear(&dlist);
 	return;
   }
-	
+
   if (p->opt->flags & OPT_XDEV) {
 	if (p->opt->odev == 0)
 	  p->opt->odev = p->stat->dev;
 	if (p->stat->dev != p->opt->odev) {
-	  list_free(&dlist);
+	  list_clear(&dlist);
 	  return;
 	}
   }
@@ -224,7 +232,7 @@ walk_through(const char *n_name, const char *d_name, plan_t *p)
   if (NULL == (dirp = opendir(n_name))) {
 	(void)fprintf(stderr,	"%s: %s: %s\n",
 				  SEARCH_NAME, n_name, strerror(errno));
-	list_free(&dlist);
+	list_clear(&dlist);
 	return;
   }
 
@@ -248,10 +256,17 @@ walk_through(const char *n_name, const char *d_name, plan_t *p)
   /* we can tell if or not a directory is */
   /* empty. If it's empty, then display it. */
   if (p->opt->flags & OPT_EMPTY) {
-	if (p->opt->o_type == NT_ISDIR) {
+	if (p->opt->o_type == NT_ISDIR ||
+		p->opt->o_type == NT_UNKNOWN ||
+		p->stat->type == p->opt->o_type) {
 	  if (nents == 0) {
-		out(n_name, p);
-		list_free(&dlist);
+		if (!(p->opt->flags & OPT_DEL)) {
+		  out(n_name);
+		} else {
+		  dislink(n_name);
+		}
+
+		list_clear(&dlist);
 		return;
 	  }
 	}
@@ -259,10 +274,12 @@ walk_through(const char *n_name, const char *d_name, plan_t *p)
 
   /* Sort the search result if */
   /* necessary. */
-  if (p->opt->flags & OPT_SORT)
+  if (p->opt->flags & OPT_SORT) {
 	dl_sort(&dlist);
+  }
+  
   dlist->cur = dlist->head;
-  while (dlist->cur != NULL) {
+  while (dlist->cur) {
 	if (dlist->cur->ent != NULL) {
 	  pbase = basename(dlist->cur->ent);
 	  walk_through(dlist->cur->ent, pbase, p);
@@ -270,30 +287,22 @@ walk_through(const char *n_name, const char *d_name, plan_t *p)
 	dlist->cur = dlist->cur->next;
   }
   
-  closedir(dirp);  
-  list_free(&dlist);
+  closedir(dirp);
+  list_clear(&dlist);
+
+  if (matched && delete)
+	dislink(n_name);
+
   return;
 }
 
 static void
-out(const char *s, plan_t *p)
+out(const char *s)
 {
   if (s == NULL)
 	return;
-  if (p == NULL)
-	return;
-  if (p->opt == NULL)
-	return;
-  if (p->opt->flags & OPT_DEL) {
-#ifdef _DEBUG_
-	(void)fprintf(stderr, "%s: out(%s): to be deleted.\n",
-				  SEARCH_NAME, s);
-#endif
-	return;
-  }
   
   (void)fprintf(stdout, "%s\n", s);
-  return;
 }
 
 static node_t
@@ -434,41 +443,43 @@ tell_user(const char *suid, const uid_t uid)
 }
 
 static void
-dislink(dl_node **n)
+dislink(const char *path)
 {
-  int ret;
-  dl_node *np = *n;
   static struct stat stbuf;
   
-  if (np == NULL)
+  if (path == NULL)
 	return;
-
-  if (np->deleted == 1) {
-
+  
+  if ((0 == strncmp(path, ".", strlen(path) + 1)) ||
+	  (0 == strncmp(path, "..", strlen(path) + 1)))
+	return;
+  
 #ifdef _DEBUG_
-	(void)fprintf(stderr, "%s: dislink(%s): to be deleted.\n",
-				  SEARCH_NAME, np->ent);
+  (void)fprintf(stderr, "%s: dislink(%s): to be deleted.\n",
+				SEARCH_NAME, path);
 #endif
+  
+  if (stat(path, &stbuf) < 0) {
+	(void)fprintf(stderr, "%s: %s: %s\n",
+				  SEARCH_NAME, path, strerror(errno));
+	return;
+  }
 	
-	stat(np->ent, &stbuf);
-	if(S_ISDIR(stbuf.st_mode)) {
-	  ret = rmdir(np->ent);
-	  if (ret < 0) {
-		(void)fprintf(stderr, "%s: --rmdir(%s): %s\n",
-					  SEARCH_NAME, np->ent, strerror(errno));
-	  }
-	} else {
-	  ret = unlink(np->ent);
-	  if (ret < 0) {
-		(void)fprintf(stderr, "%s: --unlink(%s): %s\n",
-					  SEARCH_NAME, np->ent, strerror(errno));
-	  }
+  if(S_ISDIR(stbuf.st_mode)) {
+	if (rmdir(path) < 0) {
+	  (void)fprintf(stderr, "%s: --rmdir(%s): %s\n",
+					SEARCH_NAME, path, strerror(errno));
+	}
+  } else {
+	if (unlink(path) < 0) {
+	  (void)fprintf(stderr, "%s: --unlink(%s): %s\n",
+					SEARCH_NAME, path, strerror(errno));
 	}
   }
 }
 
 static void
-list_free(DLIST **list)
+list_clear(DLIST **list)
 {
   DLIST *listp = *list;
   
