@@ -27,6 +27,7 @@
 #include <libgen.h>
 #include <pwd.h>
 #include <grp.h>
+#include <dlist.h>
 
 #include "search.h"
 
