@@ -248,10 +248,12 @@ walk_through(const char *n_name, const char *d_name, plan_t *p)
   /* we can tell if or not a directory is */
   /* empty. If it's empty, then display it. */
   if (p->opt->flags & OPT_EMPTY) {
-	if (nents == 0) {
-	  out(n_name, p);
-	  list_free(&dlist);
-	  return;
+	if (p->opt->o_type == NT_ISDIR) {
+	  if (nents == 0) {
+		out(n_name, p);
+		list_free(&dlist);
+		return;
+	  }
 	}
   }
 
