@@ -64,7 +64,6 @@ main(int argc, char *argv[])
   plan.exec_func = exec_name;
   plan.opt->odev = 0;
   plan.opt->flags = OPT_NONE;
-  bzero(plan.paths, MAXPATHLEN);
   bzero(plan.group, LINE_MAX);
   bzero(plan.user, LINE_MAX);
   bzero(plan.mt->pattern, LINE_MAX);
