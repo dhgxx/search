@@ -27,10 +27,10 @@
  *
  */
 
-extern void lookup_options(int, char *[], plan_t *);
-extern int comp_regex(plan_t *);
-extern int exec_regex(const char *, plan_t *);
-extern int exec_name(const char *, plan_t *);
+extern int lookup_options(int, char *[], plan_t *);
+extern int comp_regex(match_t *);
+extern int exec_regex(const char *, match_t *);
+extern int exec_name(const char *, match_t *);
 extern void walk_through(const char *, const char *, plan_t *);
 extern void display_usage(void);
 extern void display_version(void);

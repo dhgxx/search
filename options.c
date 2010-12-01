@@ -1,20 +1,18 @@
 #include <getopt.h>
 
 #include "search.h"
-
-extern int exec_name(const char *, plan_t *);
-extern int exec_regex(const char *, plan_t *);
+#include "extern.h"
 
 static void ftype_err(const char *);
 
-void lookup_options(int, char *[], plan_t *);
+int lookup_options(int, char *[], plan_t *);
 void display_usage(void);
 void display_version(void);
 
-void
+int
 lookup_options(int argc, char *argv[], plan_t *p)
 {
-  int ch;
+  int ch, ret;
   static int opt_empty;
   static int opt_delete;
   
@@ -35,24 +33,24 @@ lookup_options(int argc, char *argv[], plan_t *p)
 	{ NULL,      0,                 NULL,        0  }
   };
 
+  ret = 0;
+
   while ((ch = getopt_long(argc, argv, "EILPsvxf:n:r:t:", longopts, NULL)) != -1)
 	switch (ch) {
 	case 2:
 	case 3:
-	  p->opt->flags |= OPT_GRP;
-	  bzero(p->opt->group, LINE_MAX);
-	  strncpy(p->opt->group, optarg, LINE_MAX);
+	  p->flags |= OPT_GRP;
+	  bzero(p->group, LINE_MAX);
+	  strncpy(p->group, optarg, LINE_MAX);
 	  break;
 	case 4:
 	case 5:
-	  p->opt->flags |=  OPT_USR;
-	  bzero(p->opt->user, LINE_MAX);
-	  strncpy(p->opt->user, optarg, LINE_MAX);
+	  p->flags |=  OPT_USR;
+	  bzero(p->user, LINE_MAX);
+	  strncpy(p->user, optarg, LINE_MAX);
 	  break;
 	case 'f':
-	  p->opt->flags |= OPT_PATH;
-	  bzero(p->opt->path, MAXPATHLEN);
-	  strncpy(p->opt->path, optarg, MAXPATHLEN);
+	  dl_append(optarg, &(p->paths));
 	  break;
 	case 'n':
 	  bzero(p->mt->pattern, LINE_MAX);
@@ -66,54 +64,56 @@ lookup_options(int argc, char *argv[], plan_t *p)
 	  break;
 	case 0:
 	  if (opt_empty == 1)
-		p->opt->flags |= OPT_EMPTY;
+		p->flags |= OPT_EMPTY;
 	  if (opt_delete == 1)
-		p->opt->flags |=  OPT_DEL;
+		p->flags |=  OPT_DEL;
 	  break;
 	case 's':
-	  p->opt->flags |= OPT_SORT;
+	  p->flags |= OPT_SORT;
 	  break;
 	case 'v':
 	  display_version();
+	  ret = -1;
 	  break;
 	case 'x':
-	  p->opt->flags |= OPT_XDEV;
+	  p->flags |= OPT_XDEV;
 	  break;
 	case 't':
 	  switch (optarg[0]) {
 	  case 'p':
-		p->opt->o_type = NT_ISFIFO;
+		p->type = NT_ISFIFO;
 		break;
 	  case 'c':
-		p->opt->o_type = NT_ISCHR;
+		p->type = NT_ISCHR;
 		break;
 	  case 'd':
-		p->opt->o_type = NT_ISDIR;
+		p->type = NT_ISDIR;
 		break;
 	  case 'b':
-		p->opt->o_type = NT_ISBLK;
+		p->type = NT_ISBLK;
 		break;
 	  case 'l':
-		p->opt->o_type = NT_ISLNK;
+		p->type = NT_ISLNK;
 		p->stat_func = lstat; 
 		break;
 	  case 's':
-		p->opt->o_type = NT_ISSOCK;
+		p->type = NT_ISSOCK;
 		break;
 	  case 'f':
 	  case '\0':
-		p->opt->o_type = NT_ISREG;
+		p->type = NT_ISREG;
 		break;
 	  default:
 		ftype_err(optarg);
+		ret = -1;
 		break;
 	  }
 	  break;
 	case 'E':
-	  p->mt->cflag |= REG_EXTENDED;
+	  p->mt->mflag |= REG_EXTENDED;
 	  break;
 	case 'I':
-	  p->opt->flags |= OPT_ICAS;
+	  p->mt->mflag |= REG_ICASE;
 	  break;
 	case 'L':
 	  p->stat_func = stat;
@@ -122,8 +122,11 @@ lookup_options(int argc, char *argv[], plan_t *p)
 	  break;
 	default:
 	  display_usage();
+	  ret = -1;
 	  break;
 	}
+
+  return (ret);
 }
 
 void
@@ -146,7 +149,7 @@ display_usage(void)
 
   (void)fprintf(stderr,	usage,
 				SEARCH_NAME, SEARCH_NAME);
-  exit (0);
+  return;
 }
 
 void
@@ -154,7 +157,7 @@ display_version(void)
 {  
   (void)fprintf(stderr,	"%s version %s\n",
 				SEARCH_NAME, SEARCH_VERSION);
-  exit (0);
+  return;
 }
 
 static void
@@ -163,7 +166,6 @@ ftype_err(const char *s)
   if (s == NULL)
 	return;
 
-  (void)fprintf(stderr, "%s: --type: %s: unknown type\n",
-				SEARCH_NAME, s);
-  exit (0);
+  warnx("--type: %s: unknown type", s);
+  return;
 }
