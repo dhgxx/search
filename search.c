@@ -29,6 +29,8 @@
 
 plan_t plan;
 
+static int init_plan(plan_t *);
+static void walk(dl_node **);
 static void free_mt(match_t **);
 static void cleanup(int);
 
@@ -44,46 +46,31 @@ main(int argc, char *argv[])
   
   (void)setlocale(LC_CTYPE, "");
   signal(SIGINT, cleanup);
-  
-  plan.opt = (options_t *)malloc(sizeof(options_t));
-  plan.mt = (match_t *)malloc(sizeof(match_t));
-  plan.stat = (node_stat_t *)malloc(sizeof(node_stat_t));
-  plan.paths = dl_init();
-  
-  if (plan.opt == NULL ||
-	  plan.mt == NULL ||
-	  plan.stat == NULL ||
-	  plan.paths == NULL) {
-	warn("malloc(3)");
-	cleanup(1);
-	exit(1);
-  }
 
-  plan.opt->o_type = NT_UNKNOWN;
-  plan.stat_func = lstat;
-  plan.exec_func = exec_name;
-  plan.opt->odev = 0;
-  plan.opt->flags = OPT_NONE;
-  bzero(plan.group, LINE_MAX);
-  bzero(plan.user, LINE_MAX);
-  bzero(plan.mt->pattern, LINE_MAX);
+  if (init_plan(&plan) < 0) {
+	warnx("init_plan()");
+	cleanup(1);
+	exit (1);
+  }
   
   if (lookup_options(argc, argv, &plan) < 0) {
+	warnx("lookup_options()");
 	cleanup(1);
 	exit (1);
   }
   
   argc -= optind;
   argv += optind;
-
-  if (argc == 0) {
-	display_usage();
-	cleanup(1);
+    
+  if (comp_regex(plan.mt) < 0) {
+	cleanup (1);
 	exit (1);
   }
-  
-  if (comp_regex(&plan) < 0) {
-	cleanup (1);
+
+  if (argc == 0 &&
+	  dl_empty(&(plan.paths))) {
+	display_usage();
+	cleanup(1);
 	exit (1);
   }
   
@@ -91,19 +78,49 @@ main(int argc, char *argv[])
 	for (i = 0; i < argc && argv[i]; i++)
 	  dl_append(argv[i], &(plan.paths));
   }
-
-  if (!dl_empty(&(plan.paths))) {
-	if (plan.opt->flags & OPT_SORT)
-	  dl_sort(&(plan.paths));
-	plan.paths->cur = plan.paths->head;
-	while (plan.paths->cur != NULL) {
-	  walk_through(plan.paths->cur->ent, plan.paths->cur->ent, &plan);
-	  plan.paths->cur = plan.paths->cur->next;
-	}
-  }
+  
+  if (plan.flags & OPT_SORT)
+	dl_sort(&(plan.paths));
+  dl_foreach(&(plan.paths), walk);
 
   cleanup(1);
   exit(0);
+}
+
+static int
+init_plan(plan_t *p)
+{
+  p->mt = (match_t *)malloc(sizeof(match_t));
+  p->stat = (node_stat_t *)malloc(sizeof(node_stat_t));
+  p->paths = dl_init();
+  
+  if (p->mt == NULL ||
+	  p->stat == NULL ||
+	  p->paths == NULL)
+	return (-1);
+
+  p->flags = OPT_NONE;
+  p->type = NT_UNKNOWN;
+  p->odev = 0;
+  p->stat_func = lstat;
+  p->exec_func = exec_name;
+  p->mt->mflag = REG_BASIC;
+  bzero(p->group, LINE_MAX);
+  bzero(p->user, LINE_MAX);
+  bzero(p->mt->pattern, LINE_MAX);
+  
+  return (0);
+}
+
+static void
+walk(dl_node **n)
+{
+  dl_node *np = *n;
+  
+  if (np == NULL)
+	return;
+
+  walk_through(np->ent, np->ent, &plan);
 }
 
 static void
@@ -134,11 +151,6 @@ cleanup(int sig)
   if (plan.mt != NULL) {
 	free_mt(&(plan.mt));
 	plan.mt = NULL;
-  }
-  
-  if (plan.opt != NULL) {
-	free(plan.opt);
-	plan.opt = NULL;
   }
   
   if (plan.stat != NULL) {

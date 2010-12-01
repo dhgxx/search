@@ -40,13 +40,13 @@ static int tell_user(const char *, const uid_t);
 static void dislink(const char *, node_t);
 static void list_clear(DLIST **);
 
-int comp_regex(plan_t *);
-int exec_regex(const char *, plan_t *);
-int exec_name(const char *, plan_t *);
+int comp_regex(match_t *);
+int exec_regex(const char *, match_t *);
+int exec_name(const char *, match_t *);
 void walk_through(const char *, const char *, plan_t *);
 
 int
-exec_name(const char *d_name, plan_t *p)
+exec_name(const char *d_name, match_t *mt)
 {
   int matched;
   unsigned int plen, mflag;
@@ -54,20 +54,18 @@ exec_name(const char *d_name, plan_t *p)
 
   if (d_name == NULL)
 	return (-1);
-  if (p == NULL)
-	return (-1);
-  if (p->mt == NULL)
+  if (mt == NULL)
 	return (-1);
   
   mflag = 0;
-  pattern = p->mt->pattern;
+  pattern = mt->pattern;
   plen = strlen(pattern);
   matched = FNM_NOMATCH;
   
   if (plen == 0)
 	pattern = "*";
   
-  if (p->opt->flags & OPT_ICAS) {
+  if (mt->mflag & REG_ICASE) {
 	mflag = FNM_CASEFOLD | FNM_PERIOD | FNM_PATHNAME | FNM_NOESCAPE;
   }
 
@@ -81,7 +79,7 @@ exec_name(const char *d_name, plan_t *p)
 }
 
 int
-comp_regex(plan_t *p)
+comp_regex(match_t *mt)
 {
   int ret;
   unsigned int plen, mflag;
@@ -89,26 +87,20 @@ comp_regex(plan_t *p)
   char *pattern;
   static regex_t *fmt;
 
-  if (p == NULL)
-	return (-1);
-  if (p->opt == NULL)
-	return (-1);
-  if (p->mt == NULL)
+  if (mt == NULL)
 	return (-1);
   
-  mflag = REG_BASIC;
-  plen = strlen(p->mt->pattern);
-  if (p->opt->flags & OPT_ICAS)
-	mflag |= REG_ICASE;
+  mflag = mt->mflag;
+  plen = strlen(mt->pattern);
     
   bzero(msg, LINE_MAX);
-  fmt = &(p->mt->fmt);
+  fmt = &(mt->fmt);
 
   /* defaults to search all types. */
   if (plen == 0)
 	pattern = ".*";
   else
-	pattern = p->mt->pattern;
+	pattern = mt->pattern;
 
   ret = regcomp(fmt, pattern, mflag);
 
@@ -127,7 +119,7 @@ comp_regex(plan_t *p)
 
 
 int
-exec_regex(const char *d_name, plan_t *p)
+exec_regex(const char *d_name, match_t *mt)
 {
   int ret, plen, matched;
   char *pattern, msg[LINE_MAX];
@@ -136,13 +128,11 @@ exec_regex(const char *d_name, plan_t *p)
 
   if (d_name == NULL)
 	return (-1);
-  if (p == NULL)
-	return (-1);
-  if (p->mt == NULL)
+  if (mt == NULL)
 	return (-1);
 
-  fmt = &(p->mt->fmt);
-  pattern = p->mt->pattern;
+  fmt = &(mt->fmt);
+  pattern = mt->pattern;
   plen = strlen(d_name);
   
   bzero(msg, LINE_MAX);
@@ -188,7 +178,7 @@ walk_through(const char *n_name, const char *d_name, plan_t *p)
 	return;
   if (p == NULL)
 	return;
-  if (p->opt == NULL)
+  if (p == NULL)
 	return;
   if (p->stat == NULL)
 	return;
@@ -204,7 +194,7 @@ walk_through(const char *n_name, const char *d_name, plan_t *p)
   matched = cook_entry(n_name, d_name, p);
 
   if (matched) {
-	if (!(p->opt->flags & OPT_DEL))
+	if (!(p->flags & OPT_DEL))
 	  out(n_name);
 	else
 	  delete = 1;
@@ -217,10 +207,10 @@ walk_through(const char *n_name, const char *d_name, plan_t *p)
 	return;
   }
 
-  if (p->opt->flags & OPT_XDEV) {
-	if (p->opt->odev == 0)
-	  p->opt->odev = p->stat->dev;
-	if (p->stat->dev != p->opt->odev) {
+  if (p->flags & OPT_XDEV) {
+	if (p->odev == 0)
+	  p->odev = p->stat->dev;
+	if (p->stat->dev != p->odev) {
 	  list_clear(&dlist);
 	  return;
 	}
@@ -251,12 +241,12 @@ walk_through(const char *n_name, const char *d_name, plan_t *p)
   /* We have to count dir entries before */
   /* we can tell if or not a directory is */
   /* empty. If it's empty, then display it. */
-  if (p->opt->flags & OPT_EMPTY) {
-	if (p->opt->o_type == NT_ISDIR ||
-		p->opt->o_type == NT_UNKNOWN ||
-		p->stat->type == p->opt->o_type) {
+  if (p->flags & OPT_EMPTY) {
+	if (p->type == NT_ISDIR ||
+		p->type == NT_UNKNOWN ||
+		p->stat->type == p->type) {
 	  if (nents == 0) {
-		if (!(p->opt->flags & OPT_DEL)) {
+		if (!(p->flags & OPT_DEL)) {
 		  out(n_name);
 		} else {
 		  dislink(n_name, p->stat->type);
@@ -271,7 +261,7 @@ walk_through(const char *n_name, const char *d_name, plan_t *p)
 
   /* Sort the search result if */
   /* necessary. */
-  if (p->opt->flags & OPT_SORT) {
+  if (p->flags & OPT_SORT) {
 	dl_sort(&dlist);
   }
   
@@ -311,7 +301,7 @@ get_type(const char *d_name, plan_t *p)
 	return (NT_ERROR);
   if (p == NULL)
 	return (NT_ERROR);
-  if (p->opt == NULL)
+  if (p == NULL)
 	return (NT_ERROR);
   if (p->stat == NULL)
 	return (NT_ERROR);
@@ -352,23 +342,23 @@ cook_entry(const char *n_name, const char *d_name, plan_t *p)
 
   found = 0;
   
-  if ((0 == p->exec_func(d_name, p)) &&
-	  ((p->opt->o_type == NT_UNKNOWN) ||
-	   (p->opt->o_type == p->stat->type))) {
+  if ((0 == p->exec_func(d_name, p->mt)) &&
+	  ((p->type == NT_UNKNOWN) ||
+	   (p->type == p->stat->type))) {
 
 	found = 1;
 	
-	if (p->opt->flags & OPT_EMPTY) {
+	if (p->flags & OPT_EMPTY) {
 	  if (!(p->stat->empty))
 		found = 0;
 	}
 
-	if (p->opt->flags & OPT_GRP) {
+	if (p->flags & OPT_GRP) {
 	  if (0 != tell_group(p->group, p->stat->gid))
 		found = 0;
 	}
 	
-	if (p->opt->flags & OPT_USR) {
+	if (p->flags & OPT_USR) {
 	  if (0 != tell_user(p->user, p->stat->uid))
 		found = 0;
 	}

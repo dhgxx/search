@@ -55,7 +55,6 @@
 #define OPT_XDEV  0x0020
 #define OPT_DEL   0x0040
 #define OPT_SORT  0x0080
-#define OPT_ICAS  0x0200
 
 typedef enum _node_t {
   NT_UNKNOWN = DT_UNKNOWN,
@@ -72,14 +71,8 @@ typedef enum _node_t {
 typedef struct _match_t {
   regex_t fmt;
   char pattern[LINE_MAX];
-  unsigned int cflag;
+  unsigned int mflag;
 } match_t;
-
-typedef struct _options_t {
-  unsigned int flags;
-  node_t o_type;
-  dev_t odev;
-} options_t;
 
 typedef struct _node_stat_t {
   node_t type;
@@ -90,14 +83,16 @@ typedef struct _node_stat_t {
 } node_stat_t;
 
 typedef struct _plan_t {
+  unsigned flags;
   char user[LINE_MAX];
   char group[LINE_MAX];
   DLIST *paths;
+  node_t type;
   node_stat_t *stat;
-  options_t *opt;
   match_t *mt;
+  dev_t odev;
   int (*stat_func)(const char *, struct stat *);
-  int (*exec_func)(const char *, struct _plan_t *);
+  int (*exec_func)(const char *, struct _match_t *);
 } plan_t;
 
 #endif	/* _SEARCH_H_ */
