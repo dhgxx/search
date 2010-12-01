@@ -1,9 +1,7 @@
 #include <getopt.h>
 
 #include "search.h"
-
-extern int exec_name(const char *, plan_t *);
-extern int exec_regex(const char *, plan_t *);
+#include "extern.h"
 
 static void ftype_err(const char *);
 
@@ -41,13 +39,13 @@ lookup_options(int argc, char *argv[], plan_t *p)
 	switch (ch) {
 	case 2:
 	case 3:
-	  p->opt->flags |= OPT_GRP;
+	  p->flags |= OPT_GRP;
 	  bzero(p->group, LINE_MAX);
 	  strncpy(p->group, optarg, LINE_MAX);
 	  break;
 	case 4:
 	case 5:
-	  p->opt->flags |=  OPT_USR;
+	  p->flags |=  OPT_USR;
 	  bzero(p->user, LINE_MAX);
 	  strncpy(p->user, optarg, LINE_MAX);
 	  break;
@@ -66,44 +64,44 @@ lookup_options(int argc, char *argv[], plan_t *p)
 	  break;
 	case 0:
 	  if (opt_empty == 1)
-		p->opt->flags |= OPT_EMPTY;
+		p->flags |= OPT_EMPTY;
 	  if (opt_delete == 1)
-		p->opt->flags |=  OPT_DEL;
+		p->flags |=  OPT_DEL;
 	  break;
 	case 's':
-	  p->opt->flags |= OPT_SORT;
+	  p->flags |= OPT_SORT;
 	  break;
 	case 'v':
 	  display_version();
 	  ret = -1;
 	  break;
 	case 'x':
-	  p->opt->flags |= OPT_XDEV;
+	  p->flags |= OPT_XDEV;
 	  break;
 	case 't':
 	  switch (optarg[0]) {
 	  case 'p':
-		p->opt->o_type = NT_ISFIFO;
+		p->type = NT_ISFIFO;
 		break;
 	  case 'c':
-		p->opt->o_type = NT_ISCHR;
+		p->type = NT_ISCHR;
 		break;
 	  case 'd':
-		p->opt->o_type = NT_ISDIR;
+		p->type = NT_ISDIR;
 		break;
 	  case 'b':
-		p->opt->o_type = NT_ISBLK;
+		p->type = NT_ISBLK;
 		break;
 	  case 'l':
-		p->opt->o_type = NT_ISLNK;
+		p->type = NT_ISLNK;
 		p->stat_func = lstat; 
 		break;
 	  case 's':
-		p->opt->o_type = NT_ISSOCK;
+		p->type = NT_ISSOCK;
 		break;
 	  case 'f':
 	  case '\0':
-		p->opt->o_type = NT_ISREG;
+		p->type = NT_ISREG;
 		break;
 	  default:
 		ftype_err(optarg);
@@ -112,10 +110,10 @@ lookup_options(int argc, char *argv[], plan_t *p)
 	  }
 	  break;
 	case 'E':
-	  p->mt->cflag |= REG_EXTENDED;
+	  p->mt->mflag |= REG_EXTENDED;
 	  break;
 	case 'I':
-	  p->opt->flags |= OPT_ICAS;
+	  p->mt->mflag |= REG_ICASE;
 	  break;
 	case 'L':
 	  p->stat_func = stat;
