@@ -27,7 +27,6 @@
 #include <libgen.h>
 #include <pwd.h>
 #include <grp.h>
-#include <dlist.h>
 
 #include "search.h"
 
@@ -38,7 +37,7 @@ static node_t get_type(const char *, plan_t *);
 static int cook_entry(const char *, const char *, plan_t *);
 static int tell_group(const char *, const gid_t);
 static int tell_user(const char *, const uid_t);
-static void dislink(const char *);
+static void dislink(const char *, node_t);
 static void list_clear(DLIST **);
 
 int comp_regex(plan_t *);
@@ -73,8 +72,8 @@ exec_name(const char *d_name, plan_t *p)
   }
 
 #ifdef _DEBUG_
-  (void)fprintf(stderr,	"%s: exec_name: pattern=%s, name=%s\n",
-				SEARCH_NAME, pattern, d_name);
+  warnx("exec_name: pattern=%s, name=%s",
+		pattern, d_name);
 #endif
   
   matched = fnmatch(pattern, d_name, mflag);
@@ -115,11 +114,10 @@ comp_regex(plan_t *p)
 
   if (ret != 0) {
 	if (regerror(ret, fmt, msg, LINE_MAX) > 0) {
-	  (void)fprintf(stderr, "%s: %s: %s\n",
-					SEARCH_NAME, pattern, msg);
+	  warnx("%s: %s",
+			pattern, msg);
 	} else {
-	  (void)fprintf(stderr, "%s: %s: %s\n",
-					SEARCH_NAME, pattern, strerror(errno));
+	  warn("%s", pattern);
 	}
 	regfree(fmt);
 	return (-1);
@@ -156,19 +154,18 @@ exec_regex(const char *d_name, plan_t *p)
 
   if (ret != 0 && ret != REG_NOMATCH) {
 	if (regerror(ret, fmt, msg, LINE_MAX) > 0) {
-	  (void)fprintf(stderr, "%s: %s: %s\n",
-					SEARCH_NAME, pattern, msg);
+	  warnx("%s: %s",
+			pattern, msg);
 	} else {
-	  (void)fprintf(stderr, "%s: %s: %s\n",
-					SEARCH_NAME, pattern, strerror(errno));
+	  warn("%s", pattern);
 	}
 	regfree(fmt);
 	return (-1);
   }
 
 #ifdef _DEBUG_
-  (void)fprintf(stderr, "%s: exec_regex: pattern=%s, name=%s\n",
-				SEARCH_NAME, pattern, d_name);
+  warnx("exec_regex: pattern=%s, name=%s",
+		pattern, d_name);
 #endif
   
   matched = ((ret == 0) && (pmatch.rm_so == 0) && (pmatch.rm_eo == plen));
@@ -197,8 +194,7 @@ walk_through(const char *n_name, const char *d_name, plan_t *p)
 	return;
     
   if (get_type(n_name, p) == NT_ERROR) {
-	(void)fprintf(stderr, "%s: %s: %s\n",
-				  SEARCH_NAME, n_name, strerror(errno));
+	warn("%s", n_name);
 	return;
   }
 
@@ -215,8 +211,8 @@ walk_through(const char *n_name, const char *d_name, plan_t *p)
   }
   
   if (p->stat->type != NT_ISDIR) {
-	if (delete)
-	  dislink(n_name);
+	if (matched && delete)
+	  dislink(n_name, p->stat->type);
 	list_clear(&dlist);
 	return;
   }
@@ -231,8 +227,7 @@ walk_through(const char *n_name, const char *d_name, plan_t *p)
   }
 
   if (NULL == (dirp = opendir(n_name))) {
-	(void)fprintf(stderr,	"%s: %s: %s\n",
-				  SEARCH_NAME, n_name, strerror(errno));
+	warn("%s", n_name);
 	list_clear(&dlist);
 	return;
   }
@@ -264,10 +259,11 @@ walk_through(const char *n_name, const char *d_name, plan_t *p)
 		if (!(p->opt->flags & OPT_DEL)) {
 		  out(n_name);
 		} else {
-		  dislink(n_name);
+		  dislink(n_name, p->stat->type);
 		}
 
 		list_clear(&dlist);
+		closedir(dirp);
 		return;
 	  }
 	}
@@ -292,7 +288,7 @@ walk_through(const char *n_name, const char *d_name, plan_t *p)
   list_clear(&dlist);
 
   if (matched && delete)
-	dislink(n_name);
+	dislink(n_name, p->stat->type);
 
   return;
 }
@@ -368,12 +364,12 @@ cook_entry(const char *n_name, const char *d_name, plan_t *p)
 	}
 
 	if (p->opt->flags & OPT_GRP) {
-	  if (0 != tell_group(p->opt->group, p->stat->gid))
+	  if (0 != tell_group(p->group, p->stat->gid))
 		found = 0;
 	}
 	
 	if (p->opt->flags & OPT_USR) {
-	  if (0 != tell_user(p->opt->user, p->stat->uid))
+	  if (0 != tell_user(p->user, p->stat->uid))
 		found = 0;
 	}
   }
@@ -401,9 +397,7 @@ tell_group(const char *sgid, const gid_t gid)
 	grp = getgrnam(p);
   
   if (grp == NULL) {
-	(void)fprintf(stderr, "%s: --group: %s: no such group\n",
-				  SEARCH_NAME, sgid);
-	exit (0);
+	errx(0, "--group: %s: no such group", sgid);
   }
 
   if (grp->gr_gid == gid)
@@ -432,9 +426,7 @@ tell_user(const char *suid, const uid_t uid)
 	pwd = getpwnam(p);
   
   if (pwd == NULL) {
-	(void)fprintf(stderr, "%s: --user: %s: no such user\n",
-				  SEARCH_NAME, suid);
-	exit (0);
+	errx(0, "--user: %s: no such user", suid);
   }
 
   if (pwd->pw_uid == uid)
@@ -444,10 +436,8 @@ tell_user(const char *suid, const uid_t uid)
 }
 
 static void
-dislink(const char *path)
-{
-  static struct stat stbuf;
-  
+dislink(const char *path, node_t type)
+{  
   if (path == NULL)
 	return;
   
@@ -456,25 +446,16 @@ dislink(const char *path)
 	return;
   
 #ifdef _DEBUG_
-  (void)fprintf(stderr, "%s: dislink(%s): to be deleted.\n",
-				SEARCH_NAME, path);
+  warnx("dislink(%s): %s: to be deleted.", path, path);
 #endif
   
-  if (stat(path, &stbuf) < 0) {
-	(void)fprintf(stderr, "%s: %s: %s\n",
-				  SEARCH_NAME, path, strerror(errno));
-	return;
-  }
-	
-  if(S_ISDIR(stbuf.st_mode)) {
+  if(type == NT_ISDIR) {
 	if (rmdir(path) < 0) {
-	  (void)fprintf(stderr, "%s: --rmdir(%s): %s\n",
-					SEARCH_NAME, path, strerror(errno));
+	  warn("--rmdir(%s)", path);
 	}
   } else {
 	if (unlink(path) < 0) {
-	  (void)fprintf(stderr, "%s: --unlink(%s): %s\n",
-					SEARCH_NAME, path, strerror(errno));
+	  warn("--unlink(%s)", path);
 	}
   }
 }

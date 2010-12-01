@@ -27,7 +27,7 @@
  *
  */
 
-extern void lookup_options(int, char *[], plan_t *);
+extern int lookup_options(int, char *[], plan_t *);
 extern int comp_regex(plan_t *);
 extern int exec_regex(const char *, plan_t *);
 extern int exec_name(const char *, plan_t *);

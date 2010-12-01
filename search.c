@@ -48,12 +48,13 @@ main(int argc, char *argv[])
   plan.opt = (options_t *)malloc(sizeof(options_t));
   plan.mt = (match_t *)malloc(sizeof(match_t));
   plan.stat = (node_stat_t *)malloc(sizeof(node_stat_t));
+  plan.paths = dl_init();
   
   if (plan.opt == NULL ||
 	  plan.mt == NULL ||
-	  plan.stat == NULL) {
-	(void)fprintf(stderr, "%s: malloc(3): %s.\n",
-				  SEARCH_NAME, strerror(errno));
+	  plan.stat == NULL ||
+	  plan.paths == NULL) {
+	warn("malloc(3)");
 	cleanup(1);
 	exit(1);
   }
@@ -63,30 +64,43 @@ main(int argc, char *argv[])
   plan.exec_func = exec_name;
   plan.opt->odev = 0;
   plan.opt->flags = OPT_NONE;
-  bzero(plan.opt->path, MAXPATHLEN);
+  bzero(plan.paths, MAXPATHLEN);
+  bzero(plan.group, LINE_MAX);
+  bzero(plan.user, LINE_MAX);
   bzero(plan.mt->pattern, LINE_MAX);
   
-  lookup_options(argc, argv, &plan);
+  if (lookup_options(argc, argv, &plan) < 0) {
+	cleanup(1);
+	exit (1);
+  }
   
   argc -= optind;
   argv += optind;
 
-  if ((argc == 0) &&
-	  (OPT_PATH != (plan.opt->flags & OPT_PATH)))
+  if (argc == 0) {
 	display_usage();
+	cleanup(1);
+	exit (1);
+  }
   
   if (comp_regex(&plan) < 0) {
 	cleanup (1);
 	exit (1);
   }
-
-  if (plan.opt->flags & OPT_PATH) {
-	walk_through(plan.opt->path, plan.opt->path, &plan);
-  }
-
+  
   if (argc > 0) {
 	for (i = 0; i < argc && argv[i]; i++)
-	  walk_through(argv[i], argv[i], &plan);
+	  dl_append(argv[i], &(plan.paths));
+  }
+
+  if (!dl_empty(&(plan.paths))) {
+	if (plan.opt->flags & OPT_SORT)
+	  dl_sort(&(plan.paths));
+	plan.paths->cur = plan.paths->head;
+	while (plan.paths->cur != NULL) {
+	  walk_through(plan.paths->cur->ent, plan.paths->cur->ent, &plan);
+	  plan.paths->cur = plan.paths->cur->next;
+	}
   }
 
   cleanup(1);
@@ -113,6 +127,11 @@ free_mt(match_t **m)
 static void
 cleanup(int sig)
 {
+  if (plan.paths != NULL) {
+	dl_free(&(plan.paths));
+	plan.paths = NULL;
+  }
+  
   if (plan.mt != NULL) {
 	free_mt(&(plan.mt));
 	plan.mt = NULL;

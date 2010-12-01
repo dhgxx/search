@@ -7,14 +7,14 @@ extern int exec_regex(const char *, plan_t *);
 
 static void ftype_err(const char *);
 
-void lookup_options(int, char *[], plan_t *);
+int lookup_options(int, char *[], plan_t *);
 void display_usage(void);
 void display_version(void);
 
-void
+int
 lookup_options(int argc, char *argv[], plan_t *p)
 {
-  int ch;
+  int ch, ret;
   static int opt_empty;
   static int opt_delete;
   
@@ -35,24 +35,24 @@ lookup_options(int argc, char *argv[], plan_t *p)
 	{ NULL,      0,                 NULL,        0  }
   };
 
+  ret = 0;
+
   while ((ch = getopt_long(argc, argv, "EILPsvxf:n:r:t:", longopts, NULL)) != -1)
 	switch (ch) {
 	case 2:
 	case 3:
 	  p->opt->flags |= OPT_GRP;
-	  bzero(p->opt->group, LINE_MAX);
-	  strncpy(p->opt->group, optarg, LINE_MAX);
+	  bzero(p->group, LINE_MAX);
+	  strncpy(p->group, optarg, LINE_MAX);
 	  break;
 	case 4:
 	case 5:
 	  p->opt->flags |=  OPT_USR;
-	  bzero(p->opt->user, LINE_MAX);
-	  strncpy(p->opt->user, optarg, LINE_MAX);
+	  bzero(p->user, LINE_MAX);
+	  strncpy(p->user, optarg, LINE_MAX);
 	  break;
 	case 'f':
-	  p->opt->flags |= OPT_PATH;
-	  bzero(p->opt->path, MAXPATHLEN);
-	  strncpy(p->opt->path, optarg, MAXPATHLEN);
+	  dl_append(optarg, &(p->paths));
 	  break;
 	case 'n':
 	  bzero(p->mt->pattern, LINE_MAX);
@@ -75,6 +75,7 @@ lookup_options(int argc, char *argv[], plan_t *p)
 	  break;
 	case 'v':
 	  display_version();
+	  ret = -1;
 	  break;
 	case 'x':
 	  p->opt->flags |= OPT_XDEV;
@@ -106,6 +107,7 @@ lookup_options(int argc, char *argv[], plan_t *p)
 		break;
 	  default:
 		ftype_err(optarg);
+		ret = -1;
 		break;
 	  }
 	  break;
@@ -122,8 +124,11 @@ lookup_options(int argc, char *argv[], plan_t *p)
 	  break;
 	default:
 	  display_usage();
+	  ret = -1;
 	  break;
 	}
+
+  return (ret);
 }
 
 void
@@ -146,7 +151,7 @@ display_usage(void)
 
   (void)fprintf(stderr,	usage,
 				SEARCH_NAME, SEARCH_NAME);
-  exit (0);
+  return;
 }
 
 void
@@ -154,7 +159,7 @@ display_version(void)
 {  
   (void)fprintf(stderr,	"%s version %s\n",
 				SEARCH_NAME, SEARCH_VERSION);
-  exit (0);
+  return;
 }
 
 static void
@@ -163,7 +168,6 @@ ftype_err(const char *s)
   if (s == NULL)
 	return;
 
-  (void)fprintf(stderr, "%s: --type: %s: unknown type\n",
-				SEARCH_NAME, s);
-  exit (0);
+  warnx("--type: %s: unknown type", s);
+  return;
 }
