@@ -38,7 +38,7 @@ static node_t get_type(const char *, plan_t *);
 static int cook_entry(const char *, const char *, plan_t *);
 static int tell_group(const char *, const gid_t);
 static int tell_user(const char *, const uid_t);
-static void dislink(const char *);
+static void dislink(const char *, node_t);
 static void list_clear(DLIST **);
 
 int comp_regex(plan_t *);
@@ -213,7 +213,7 @@ walk_through(const char *n_name, const char *d_name, plan_t *p)
   
   if (p->stat->type != NT_ISDIR) {
 	if (matched && delete)
-	  dislink(n_name);
+	  dislink(n_name, p->stat->type);
 	list_clear(&dlist);
 	return;
   }
@@ -260,7 +260,7 @@ walk_through(const char *n_name, const char *d_name, plan_t *p)
 		if (!(p->opt->flags & OPT_DEL)) {
 		  out(n_name);
 		} else {
-		  dislink(n_name);
+		  dislink(n_name, p->stat->type);
 		}
 
 		list_clear(&dlist);
@@ -289,7 +289,7 @@ walk_through(const char *n_name, const char *d_name, plan_t *p)
   list_clear(&dlist);
 
   if (matched && delete)
-	dislink(n_name);
+	dislink(n_name, p->stat->type);
 
   return;
 }
@@ -437,10 +437,8 @@ tell_user(const char *suid, const uid_t uid)
 }
 
 static void
-dislink(const char *path)
-{
-  static struct stat stbuf;
-  
+dislink(const char *path, node_t type)
+{  
   if (path == NULL)
 	return;
   
@@ -449,15 +447,10 @@ dislink(const char *path)
 	return;
   
 #ifdef _DEBUG_
-  warn("dislink(%s): to be deleted.", path);
+  warnx("dislink(%s): %s: to be deleted.", path, path);
 #endif
   
-  if (stat(path, &stbuf) < 0) {
-	warn("%s", path);
-	return;
-  }
-	
-  if(S_ISDIR(stbuf.st_mode)) {
+  if(type == NT_ISDIR) {
 	if (rmdir(path) < 0) {
 	  warn("--rmdir(%s)", path);
 	}
