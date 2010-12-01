@@ -7,14 +7,14 @@ extern int exec_regex(const char *, plan_t *);
 
 static void ftype_err(const char *);
 
-void lookup_options(int, char *[], plan_t *);
+int lookup_options(int, char *[], plan_t *);
 void display_usage(void);
 void display_version(void);
 
-void
+int
 lookup_options(int argc, char *argv[], plan_t *p)
 {
-  int ch;
+  int ch, ret;
   static int opt_empty;
   static int opt_delete;
   
@@ -34,6 +34,8 @@ lookup_options(int argc, char *argv[], plan_t *p)
 	{ "xdev",    no_argument,       NULL,       'x' },
 	{ NULL,      0,                 NULL,        0  }
   };
+
+  ret = 0;
 
   while ((ch = getopt_long(argc, argv, "EILPsvxf:n:r:t:", longopts, NULL)) != -1)
 	switch (ch) {
@@ -75,6 +77,7 @@ lookup_options(int argc, char *argv[], plan_t *p)
 	  break;
 	case 'v':
 	  display_version();
+	  ret = -1;
 	  break;
 	case 'x':
 	  p->opt->flags |= OPT_XDEV;
@@ -106,6 +109,7 @@ lookup_options(int argc, char *argv[], plan_t *p)
 		break;
 	  default:
 		ftype_err(optarg);
+		ret = -1;
 		break;
 	  }
 	  break;
@@ -122,8 +126,11 @@ lookup_options(int argc, char *argv[], plan_t *p)
 	  break;
 	default:
 	  display_usage();
+	  ret = -1;
 	  break;
 	}
+
+  return (ret);
 }
 
 void
@@ -146,7 +153,7 @@ display_usage(void)
 
   (void)fprintf(stderr,	usage,
 				SEARCH_NAME, SEARCH_NAME);
-  exit (0);
+  return;
 }
 
 void
@@ -154,7 +161,7 @@ display_version(void)
 {  
   (void)fprintf(stderr,	"%s version %s\n",
 				SEARCH_NAME, SEARCH_VERSION);
-  exit (0);
+  return;
 }
 
 static void
@@ -163,7 +170,6 @@ ftype_err(const char *s)
   if (s == NULL)
 	return;
 
-  (void)fprintf(stderr, "%s: --type: %s: unknown type\n",
-				SEARCH_NAME, s);
-  exit (0);
+  warnx("--type: %s: unknown type", s);
+  return;
 }

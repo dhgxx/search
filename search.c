@@ -52,8 +52,7 @@ main(int argc, char *argv[])
   if (plan.opt == NULL ||
 	  plan.mt == NULL ||
 	  plan.stat == NULL) {
-	(void)fprintf(stderr, "%s: malloc(3): %s.\n",
-				  SEARCH_NAME, strerror(errno));
+	warn("malloc(3)");
 	cleanup(1);
 	exit(1);
   }
@@ -66,14 +65,20 @@ main(int argc, char *argv[])
   bzero(plan.opt->path, MAXPATHLEN);
   bzero(plan.mt->pattern, LINE_MAX);
   
-  lookup_options(argc, argv, &plan);
+  if (lookup_options(argc, argv, &plan) < 0) {
+	cleanup(1);
+	exit (1);
+  }
   
   argc -= optind;
   argv += optind;
 
   if ((argc == 0) &&
-	  (OPT_PATH != (plan.opt->flags & OPT_PATH)))
+	  (!(plan.opt->flags & OPT_PATH))) {
 	display_usage();
+	cleanup(1);
+	exit (1);
+  }
   
   if (comp_regex(&plan) < 0) {
 	cleanup (1);
