@@ -42,19 +42,17 @@ lookup_options(int argc, char *argv[], plan_t *p)
 	case 2:
 	case 3:
 	  p->opt->flags |= OPT_GRP;
-	  bzero(p->opt->group, LINE_MAX);
-	  strncpy(p->opt->group, optarg, LINE_MAX);
+	  bzero(p->group, LINE_MAX);
+	  strncpy(p->group, optarg, LINE_MAX);
 	  break;
 	case 4:
 	case 5:
 	  p->opt->flags |=  OPT_USR;
-	  bzero(p->opt->user, LINE_MAX);
-	  strncpy(p->opt->user, optarg, LINE_MAX);
+	  bzero(p->user, LINE_MAX);
+	  strncpy(p->user, optarg, LINE_MAX);
 	  break;
 	case 'f':
-	  p->opt->flags |= OPT_PATH;
-	  bzero(p->opt->path, MAXPATHLEN);
-	  strncpy(p->opt->path, optarg, MAXPATHLEN);
+	  dl_append(optarg, &(p->paths));
 	  break;
 	case 'n':
 	  bzero(p->mt->pattern, LINE_MAX);

@@ -27,7 +27,6 @@
 #include <libgen.h>
 #include <pwd.h>
 #include <grp.h>
-#include <dlist.h>
 
 #include "search.h"
 
@@ -365,12 +364,12 @@ cook_entry(const char *n_name, const char *d_name, plan_t *p)
 	}
 
 	if (p->opt->flags & OPT_GRP) {
-	  if (0 != tell_group(p->opt->group, p->stat->gid))
+	  if (0 != tell_group(p->group, p->stat->gid))
 		found = 0;
 	}
 	
 	if (p->opt->flags & OPT_USR) {
-	  if (0 != tell_user(p->opt->user, p->stat->uid))
+	  if (0 != tell_user(p->user, p->stat->uid))
 		found = 0;
 	}
   }
