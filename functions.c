@@ -215,7 +215,7 @@ walk_through(const char *n_name, const char *d_name, plan_t *p)
   }
   
   if (p->stat->type != NT_ISDIR) {
-	if (delete)
+	if (matched && delete)
 	  dislink(n_name);
 	list_clear(&dlist);
 	return;
