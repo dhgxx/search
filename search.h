@@ -55,6 +55,7 @@
 #define OPT_XDEV  0x0020
 #define OPT_DEL   0x0040
 #define OPT_SORT  0x0080
+#define OPT_STAT  0x0200
 
 typedef enum _node_t {
   NT_UNKNOWN = DT_UNKNOWN,
@@ -74,25 +75,38 @@ typedef struct _match_t {
   unsigned int mflag;
 } match_t;
 
-typedef struct _node_stat_t {
+typedef struct _nstat_t {
   node_t type;
-  unsigned int empty;
   uid_t uid;
   gid_t gid;
   dev_t dev;
-} node_stat_t;
+  unsigned int empty;
+  unsigned int flink;
+  unsigned int mtype;
+} nstat_t;
+
+typedef struct _args_t {
+  node_t type;
+  char suid[LINE_MAX];
+  char sgid[LINE_MAX];
+  dev_t odev;
+  unsigned int empty;
+} args_t;
+
+typedef struct _plan {
+  int (*s_func) (const char *, struct _args_t *);
+  struct _plan *next;
+} PLAN;
 
 typedef struct _plan_t {
-  unsigned flags;
-  char user[LINE_MAX];
-  char group[LINE_MAX];
-  DLIST *paths;
-  node_t type;
-  node_stat_t *stat;
-  match_t *mt;
-  dev_t odev;
-  int (*stat_func)(const char *, struct stat *);
-  int (*exec_func)(const char *, struct _match_t *);
+  unsigned int acq_flags;
+  match_t *acq_mt;
+  args_t *acq_args;
+  DLIST *acq_paths;
+  struct _plan *acq_plan;
+  struct _plan *acq_cur;
+  unsigned int acq_size;
+  struct _nstat_t *nstat;
 } plan_t;
 
 #endif	/* _SEARCH_H_ */

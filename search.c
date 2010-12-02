@@ -30,6 +30,7 @@
 plan_t plan;
 
 static int init_plan(plan_t *);
+static int find_plan(int, char **, plan_t *);
 static void walk(dl_node **);
 static void free_mt(match_t **);
 static void cleanup(int);
@@ -37,51 +38,30 @@ static void cleanup(int);
 int
 main(int argc, char *argv[])
 {
+  int i;
   
   extern char *optarg;
   extern int optind;
-  
-  int i;
-  static struct stat *stbuf;
-  
+    
   (void)setlocale(LC_CTYPE, "");
   signal(SIGINT, cleanup);
 
   if (init_plan(&plan) < 0) {
-	warnx("init_plan()");
+	warn("init_plan()");
 	cleanup(1);
-	exit (1);
-  }
-  
-  if (lookup_options(argc, argv, &plan) < 0) {
-	warnx("lookup_options()");
-	cleanup(1);
-	exit (1);
-  }
-  
-  argc -= optind;
-  argv += optind;
-    
-  if (comp_regex(plan.mt) < 0) {
-	cleanup (1);
 	exit (1);
   }
 
-  if (argc == 0 &&
-	  dl_empty(&(plan.paths))) {
-	display_usage();
+  if (find_plan(argc, argv, &plan) < 0) {
+	warn("find_plan()");
 	cleanup(1);
 	exit (1);
   }
   
-  if (argc > 0) {
-	for (i = 0; i < argc && argv[i]; i++)
-	  dl_append(argv[i], &(plan.paths));
-  }
-  
-  if (plan.flags & OPT_SORT)
-	dl_sort(&(plan.paths));
-  dl_foreach(&(plan.paths), walk);
+   
+  if (plan.acq_flags & OPT_SORT)
+	dl_sort(&(plan.acq_paths));
+  dl_foreach(&(plan.acq_paths), walk);
 
   cleanup(1);
   exit(0);
@@ -90,25 +70,46 @@ main(int argc, char *argv[])
 static int
 init_plan(plan_t *p)
 {
-  p->mt = (match_t *)malloc(sizeof(match_t));
-  p->stat = (node_stat_t *)malloc(sizeof(node_stat_t));
-  p->paths = dl_init();
-  
-  if (p->mt == NULL ||
-	  p->stat == NULL ||
-	  p->paths == NULL)
+  if (p == NULL)
 	return (-1);
-
-  p->flags = OPT_NONE;
-  p->type = NT_UNKNOWN;
-  p->odev = 0;
-  p->stat_func = lstat;
-  p->exec_func = exec_name;
-  p->mt->mflag = REG_BASIC;
-  bzero(p->group, LINE_MAX);
-  bzero(p->user, LINE_MAX);
-  bzero(p->mt->pattern, LINE_MAX);
   
+  if ((p->acq_mt = (match_t *)malloc(sizeof(match_t))) == NULL ||
+	  (p->acq_args = (args_t *)malloc(sizeof(args_t))) == NULL ||
+	  (p->acq_paths = dl_init()) == NULL) {
+	cleanup(1);
+	return (-1);
+  }
+    
+  return (0);
+}
+
+static int
+find_plan(int argc, char **argv, plan_t *p)
+{
+  int i;
+  
+  if (lookup_options(argc, argv, p) < 0) {
+	warn("lookup_options()");
+	return (-1);
+  }
+  
+  argc -= optind;
+  argv += optind;
+    
+  if (comp_regex(p->acq_mt) < 0) {
+	return (-1);
+  }
+
+  if (argc == 0 && dl_empty(&(p->acq_paths))) {
+	display_usage();
+	return (-1);
+  }
+  
+  if (argc > 0) {
+	for (i = 0; i < argc && argv[i]; i++)
+	  dl_append(argv[i], &(p->acq_paths));
+  }
+
   return (0);
 }
 
@@ -143,19 +144,19 @@ free_mt(match_t **m)
 static void
 cleanup(int sig)
 {
-  if (plan.paths != NULL) {
-	dl_free(&(plan.paths));
-	plan.paths = NULL;
+  if (plan.acq_paths != NULL) {
+	dl_free(&(plan.acq_paths));
+	plan.acq_paths = NULL;
   }
   
-  if (plan.mt != NULL) {
-	free_mt(&(plan.mt));
-	plan.mt = NULL;
+  if (plan.acq_mt != NULL) {
+	free_mt(&(plan.acq_mt));
+	plan.acq_mt = NULL;
   }
   
-  if (plan.stat != NULL) {
-	free(plan.stat);
-	plan.stat = NULL;
+  if (plan.acq_args != NULL) {
+	free(plan.acq_args);
+	plan.acq_args = NULL;
   }
   
   if (sig)

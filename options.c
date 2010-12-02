@@ -33,75 +33,78 @@ lookup_options(int argc, char *argv[], plan_t *p)
 	{ NULL,      0,                 NULL,        0  }
   };
 
+  if (p == NULL ||
+	  p->acq_mt == NULL ||
+	  p->acq_args == NULL ||
+	  p->acq_plan == NULL)
+	return (-1);
+
   ret = 0;
 
   while ((ch = getopt_long(argc, argv, "EILPsvxf:n:r:t:", longopts, NULL)) != -1)
 	switch (ch) {
 	case 2:
 	case 3:
-	  p->flags |= OPT_GRP;
-	  bzero(p->group, LINE_MAX);
-	  strncpy(p->group, optarg, LINE_MAX);
+	  p->acq_flags |= OPT_GRP;
+	  bzero(p->acq_args->sgid, LINE_MAX);
+	  strncpy(p->acq_args->sgid, optarg, LINE_MAX);
 	  break;
 	case 4:
 	case 5:
-	  p->flags |=  OPT_USR;
-	  bzero(p->user, LINE_MAX);
-	  strncpy(p->user, optarg, LINE_MAX);
+	  p->acq_flags |=  OPT_USR;
+	  bzero(p->acq_args->suid, LINE_MAX);
+	  strncpy(p->acq_args->suid, optarg, LINE_MAX);
 	  break;
 	case 'f':
-	  dl_append(optarg, &(p->paths));
+	  dl_append(optarg, &(p->acq_paths));
 	  break;
 	case 'n':
-	  bzero(p->mt->pattern, LINE_MAX);
-	  strncpy(p->mt->pattern, optarg, LINE_MAX);
-	  p->exec_func = exec_name;
+	  bzero(p->acq_mt->pattern, LINE_MAX);
+	  strncpy(p->acq_mt->pattern, optarg, LINE_MAX);
 	  break;
 	case 'r':
-	  bzero(p->mt->pattern, LINE_MAX);
-	  strncpy(p->mt->pattern, optarg, LINE_MAX);
-	  p->exec_func = exec_regex;
+	  bzero(p->acq_mt->pattern, LINE_MAX);
+	  strncpy(p->acq_mt->pattern, optarg, LINE_MAX);
 	  break;
 	case 0:
 	  if (opt_empty == 1)
-		p->flags |= OPT_EMPTY;
+		p->acq_flags |= OPT_EMPTY;
 	  if (opt_delete == 1)
-		p->flags |=  OPT_DEL;
+		p->acq_flags |=  OPT_DEL;
 	  break;
 	case 's':
-	  p->flags |= OPT_SORT;
+	  p->acq_flags |= OPT_SORT;
 	  break;
 	case 'v':
 	  display_version();
 	  ret = -1;
 	  break;
 	case 'x':
-	  p->flags |= OPT_XDEV;
+	  p->acq_flags |= OPT_XDEV;
 	  break;
 	case 't':
 	  switch (optarg[0]) {
 	  case 'p':
-		p->type = NT_ISFIFO;
+		p->acq_args->type = NT_ISFIFO;
 		break;
 	  case 'c':
-		p->type = NT_ISCHR;
+		p->acq_args->type = NT_ISCHR;
 		break;
 	  case 'd':
-		p->type = NT_ISDIR;
+		p->acq_args->type = NT_ISDIR;
 		break;
 	  case 'b':
-		p->type = NT_ISBLK;
+		p->acq_args->type = NT_ISBLK;
 		break;
 	  case 'l':
-		p->type = NT_ISLNK;
-		p->stat_func = lstat; 
+		p->acq_args->type = NT_ISLNK;
 		break;
 	  case 's':
-		p->type = NT_ISSOCK;
+		p->acq_args->type = NT_ISSOCK;
 		break;
 	  case 'f':
 	  case '\0':
-		p->type = NT_ISREG;
+		p->acq_args->type = NT_ISREG;
 		break;
 	  default:
 		ftype_err(optarg);
@@ -110,13 +113,13 @@ lookup_options(int argc, char *argv[], plan_t *p)
 	  }
 	  break;
 	case 'E':
-	  p->mt->mflag |= REG_EXTENDED;
+	  p->acq_mt->mflag |= REG_EXTENDED;
 	  break;
 	case 'I':
-	  p->mt->mflag |= REG_ICASE;
+	  p->acq_mt->mflag |= REG_ICASE;
 	  break;
 	case 'L':
-	  p->stat_func = stat;
+	  p->acq_flags |= OPT_STAT;
 	  break;
 	case 'P':
 	  break;

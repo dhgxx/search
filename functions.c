@@ -33,50 +33,16 @@
 static unsigned int delete = 0;
 
 static void out(const char *);
-static node_t get_type(const char *, plan_t *);
-static int cook_entry(const char *, const char *, plan_t *);
+static int s_gettype(const char *, plan_t *);
 static int tell_group(const char *, const gid_t);
 static int tell_user(const char *, const uid_t);
 static void dislink(const char *, node_t);
 static void list_clear(DLIST **);
 
 int comp_regex(match_t *);
-int exec_regex(const char *, match_t *);
-int exec_name(const char *, match_t *);
+int s_regex(const char *, plan_t *);
+int s_name(const char *, plan_t *);
 void walk_through(const char *, const char *, plan_t *);
-
-int
-exec_name(const char *d_name, match_t *mt)
-{
-  int matched;
-  unsigned int plen, mflag;
-  char *pattern;
-
-  if (d_name == NULL)
-	return (-1);
-  if (mt == NULL)
-	return (-1);
-  
-  mflag = 0;
-  pattern = mt->pattern;
-  plen = strlen(pattern);
-  matched = FNM_NOMATCH;
-  
-  if (plen == 0)
-	pattern = "*";
-  
-  if (mt->mflag & REG_ICASE) {
-	mflag = FNM_CASEFOLD | FNM_PERIOD | FNM_PATHNAME | FNM_NOESCAPE;
-  }
-
-#ifdef _DEBUG_
-  warnx("exec_name: pattern=%s, name=%s",
-		pattern, d_name);
-#endif
-  
-  matched = fnmatch(pattern, d_name, mflag);
-  return ((matched == 0) ? (0) : (-1));
-}
 
 int
 comp_regex(match_t *mt)
@@ -117,9 +83,8 @@ comp_regex(match_t *mt)
   return (0);
 }
 
-
 int
-exec_regex(const char *d_name, match_t *mt)
+s_regex(const char *d_name, plan_t *p)
 {
   int ret, plen, matched;
   char *pattern, msg[LINE_MAX];
@@ -128,11 +93,13 @@ exec_regex(const char *d_name, match_t *mt)
 
   if (d_name == NULL)
 	return (-1);
-  if (mt == NULL)
+  if (p == NULL)
+	return (-1);
+  if (p->acq_mt == NULL)
 	return (-1);
 
-  fmt = &(mt->fmt);
-  pattern = mt->pattern;
+  fmt = &(p->acq_mt->fmt);
+  pattern = p->acq_mt->pattern;
   plen = strlen(d_name);
   
   bzero(msg, LINE_MAX);
@@ -162,6 +129,41 @@ exec_regex(const char *d_name, match_t *mt)
   return ((matched == 1) ? (0) : (-1));
 }
 
+int
+s_name(const char *d_name, plan_t *p)
+{
+  int matched;
+  unsigned int plen, mflag;
+  char *pattern;
+
+  if (d_name == NULL)
+	return (-1);
+  if (p == NULL)
+	return (-1);
+  if (p->acq_mt == NULL)
+	return (-1);
+  
+  mflag = 0;
+  pattern = p->acq_mt->pattern;
+  plen = strlen(pattern);
+  matched = FNM_NOMATCH;
+  
+  if (plen == 0)
+	pattern = "*";
+  
+  if (p->acq_mt->mflag & REG_ICASE) {
+	mflag = FNM_CASEFOLD | FNM_PERIOD | FNM_PATHNAME | FNM_NOESCAPE;
+  }
+
+#ifdef _DEBUG_
+  warnx("exec_name: pattern=%s, name=%s",
+		pattern, d_name);
+#endif
+  
+  matched = fnmatch(pattern, d_name, mflag);
+  return ((matched == 0) ? (0) : (-1));
+}
+
 void
 walk_through(const char *n_name, const char *d_name, plan_t *p)
 {
@@ -178,12 +180,10 @@ walk_through(const char *n_name, const char *d_name, plan_t *p)
 	return;
   if (p == NULL)
 	return;
-  if (p == NULL)
-	return;
-  if (p->stat == NULL)
+  if (p->nstat == NULL)
 	return;
     
-  if (get_type(n_name, p) == NT_ERROR) {
+  if (s_gettype(n_name, p) < 0) {
 	warn("%s", n_name);
 	return;
   }
@@ -191,26 +191,26 @@ walk_through(const char *n_name, const char *d_name, plan_t *p)
   nents = 0;
   dlist = dl_init();
   
-  matched = cook_entry(n_name, d_name, p);
+  //  matched = cook_entry(n_name, d_name, p);
 
   if (matched) {
-	if (!(p->flags & OPT_DEL))
+	if (!(p->acq_flags & OPT_DEL))
 	  out(n_name);
 	else
 	  delete = 1;
   }
   
-  if (p->stat->type != NT_ISDIR) {
+  if (p->nstat->type != NT_ISDIR) {
 	if (matched && delete)
-	  dislink(n_name, p->stat->type);
+	  dislink(n_name, p->nstat->type);
 	list_clear(&dlist);
 	return;
   }
 
-  if (p->flags & OPT_XDEV) {
-	if (p->odev == 0)
-	  p->odev = p->stat->dev;
-	if (p->stat->dev != p->odev) {
+  if (p->acq_flags & OPT_XDEV) {
+	if (p->acq_args->odev == 0)
+	  p->acq_args->odev = p->nstat->dev;
+	if (p->nstat->dev != p->acq_args->odev) {
 	  list_clear(&dlist);
 	  return;
 	}
@@ -241,15 +241,15 @@ walk_through(const char *n_name, const char *d_name, plan_t *p)
   /* We have to count dir entries before */
   /* we can tell if or not a directory is */
   /* empty. If it's empty, then display it. */
-  if (p->flags & OPT_EMPTY) {
-	if (p->type == NT_ISDIR ||
-		p->type == NT_UNKNOWN ||
-		p->stat->type == p->type) {
+  if (p->acq_flags & OPT_EMPTY) {
+	if (p->acq_args->type == NT_ISDIR ||
+		p->acq_args->type == NT_UNKNOWN ||
+		p->nstat->type == p->acq_args->type) {
 	  if (nents == 0) {
-		if (!(p->flags & OPT_DEL)) {
+		if (!(p->acq_flags & OPT_DEL)) {
 		  out(n_name);
 		} else {
-		  dislink(n_name, p->stat->type);
+		  dislink(n_name, p->nstat->type);
 		}
 
 		list_clear(&dlist);
@@ -261,7 +261,7 @@ walk_through(const char *n_name, const char *d_name, plan_t *p)
 
   /* Sort the search result if */
   /* necessary. */
-  if (p->flags & OPT_SORT) {
+  if (p->acq_flags & OPT_SORT) {
 	dl_sort(&dlist);
   }
   
@@ -278,7 +278,7 @@ walk_through(const char *n_name, const char *d_name, plan_t *p)
   list_clear(&dlist);
 
   if (matched && delete)
-	dislink(n_name, p->stat->type);
+	dislink(n_name, p->nstat->type);
 
   return;
 }
@@ -292,79 +292,54 @@ out(const char *s)
   (void)fprintf(stdout, "%s\n", s);
 }
 
-static node_t
-get_type(const char *d_name, plan_t *p)
+static int
+s_gettype(const char *d_name, plan_t *p)
 {
+  int ret;
   static struct stat stbuf;
 
   if (d_name == NULL)
 	return (NT_ERROR);
   if (p == NULL)
 	return (NT_ERROR);
-  if (p == NULL)
+  if (p->nstat == NULL)
 	return (NT_ERROR);
-  if (p->stat == NULL)
-	return (NT_ERROR);
-  if (p->stat_func(d_name, &stbuf)  < 0 )
-	return (NT_ERROR);
+
+  if (p->acq_flags & OPT_STAT)
+	ret = stat(d_name, &stbuf);
+  else
+	ret = lstat(d_name, &stbuf);
+
+  if (ret < 0) {
+	warn("%s", d_name);
+	return (-1);
+  }
   
-  p->stat->gid = stbuf.st_gid;
-  p->stat->uid = stbuf.st_uid;
-  p->stat->dev = stbuf.st_dev;
+  p->nstat->gid = stbuf.st_gid;
+  p->nstat->uid = stbuf.st_uid;
+  p->nstat->dev = stbuf.st_dev;
 
   if (S_ISBLK(stbuf.st_mode))
-	p->stat->type = NT_ISBLK;
+	p->nstat->type = NT_ISBLK;
   if (S_ISCHR(stbuf.st_mode))
-	p->stat->type = NT_ISCHR;
+	p->nstat->type = NT_ISCHR;
   if (S_ISDIR(stbuf.st_mode))
-	p->stat->type = NT_ISDIR;
+	p->nstat->type = NT_ISDIR;
   if (S_ISFIFO(stbuf.st_mode))
-	p->stat->type = NT_ISFIFO;
+	p->nstat->type = NT_ISFIFO;
   if (S_ISLNK(stbuf.st_mode))
-	p->stat->type = NT_ISLNK;
+	p->nstat->type = NT_ISLNK;
   if (S_ISREG(stbuf.st_mode))
-	p->stat->type = NT_ISREG;
+	p->nstat->type = NT_ISREG;
   if (S_ISSOCK(stbuf.st_mode))
-	p->stat->type = NT_ISSOCK;
+	p->nstat->type = NT_ISSOCK;
   
   if (stbuf.st_size == 0)
-	p->stat->empty = 1;
+	p->nstat->empty = 1;
   else
-	p->stat->empty = 0;
+	p->nstat->empty = 0;
   
-  return (NT_UNKNOWN);
-}
-
-static int
-cook_entry(const char *n_name, const char *d_name, plan_t *p)
-{
-  unsigned int found;
-
-  found = 0;
-  
-  if ((0 == p->exec_func(d_name, p->mt)) &&
-	  ((p->type == NT_UNKNOWN) ||
-	   (p->type == p->stat->type))) {
-
-	found = 1;
-	
-	if (p->flags & OPT_EMPTY) {
-	  if (!(p->stat->empty))
-		found = 0;
-	}
-
-	if (p->flags & OPT_GRP) {
-	  if (0 != tell_group(p->group, p->stat->gid))
-		found = 0;
-	}
-	
-	if (p->flags & OPT_USR) {
-	  if (0 != tell_user(p->user, p->stat->uid))
-		found = 0;
-	}
-  }
-
-  return (found);
+  return (0);
 }
 
 static int
