@@ -46,18 +46,24 @@
 #include <dlist.h>
 
 #define SEARCH_NAME "search"
-#define SEARCH_VERSION "0.4"
+#define SEARCH_VERSION "0.5"
 
-#define OPT_NONE  0x0000
-#define OPT_EMPTY 0x0002
-#define OPT_GRP   0x0004
-#define OPT_USR   0x0008
-#define OPT_XDEV  0x0020
-#define OPT_DEL   0x0040
-#define OPT_SORT  0x0080
-#define OPT_STAT  0x0200
+#define OPT_NONE    0x000000
+#define OPT_EMPTY   0x000002
+#define OPT_GRP     0x000004
+#define OPT_USR     0x000008
+#define OPT_XDEV    0x000020
+#define OPT_DEL     0x000040
+#define OPT_SORT    0x000080
+#define OPT_STAT    0x000200
+#define OPT_LSTAT   0x000400
+#define OPT_NAME    0x000800
+#define OPT_REGEX   0x002000
+#define OPT_PATH    0x004000
+#define OPT_VERSION 0x008000
+#define OPT_USAGE   0x020000
 
-typedef enum _node_t {
+typedef enum _node {
   NT_UNKNOWN = DT_UNKNOWN,
   NT_ISFIFO = DT_FIFO,
   NT_ISCHR = DT_CHR,
@@ -67,7 +73,7 @@ typedef enum _node_t {
   NT_ISLNK = DT_LNK,
   NT_ISSOCK = DT_SOCK,
   NT_ERROR = -1
-} node_t;
+} NODE;
 
 typedef struct _match_t {
   regex_t fmt;
@@ -76,7 +82,7 @@ typedef struct _match_t {
 } match_t;
 
 typedef struct _nstat_t {
-  node_t type;
+  NODE type;
   uid_t uid;
   gid_t gid;
   dev_t dev;
@@ -86,27 +92,38 @@ typedef struct _nstat_t {
 } nstat_t;
 
 typedef struct _args_t {
-  node_t type;
+  NODE type;
   char suid[LINE_MAX];
   char sgid[LINE_MAX];
   dev_t odev;
   unsigned int empty;
 } args_t;
 
-typedef struct _plan {
-  int (*s_func) (const char *, struct _args_t *);
-  struct _plan *next;
-} PLAN;
-
 typedef struct _plan_t {
   unsigned int acq_flags;
   match_t *acq_mt;
   args_t *acq_args;
   DLIST *acq_paths;
-  struct _plan *acq_plan;
-  struct _plan *acq_cur;
-  unsigned int acq_size;
   struct _nstat_t *nstat;
 } plan_t;
+
+typedef struct _plan {
+  int retval;
+  int (*s_func) (const char *, struct _plan_t *);
+  struct _plan *next;
+} PLAN;
+
+typedef struct _plist_t {
+  int retval;
+  struct _plan *start;
+  struct _plan *cur;
+  unsigned int size;
+} plist_t;
+
+
+typedef struct flags_t {
+  unsigned int opt;
+  int (*s_func) (const char *, struct _plan_t *);
+} FLAGS;
 
 #endif	/* _SEARCH_H_ */

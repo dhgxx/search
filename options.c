@@ -6,8 +6,6 @@
 static void ftype_err(const char *);
 
 int lookup_options(int, char *[], plan_t *);
-void display_usage(void);
-void display_version(void);
 
 int
 lookup_options(int argc, char *argv[], plan_t *p)
@@ -35,8 +33,7 @@ lookup_options(int argc, char *argv[], plan_t *p)
 
   if (p == NULL ||
 	  p->acq_mt == NULL ||
-	  p->acq_args == NULL ||
-	  p->acq_plan == NULL)
+	  p->acq_args == NULL)
 	return (-1);
 
   ret = 0;
@@ -56,13 +53,16 @@ lookup_options(int argc, char *argv[], plan_t *p)
 	  strncpy(p->acq_args->suid, optarg, LINE_MAX);
 	  break;
 	case 'f':
+	  p->acq_flags |= OPT_PATH;
 	  dl_append(optarg, &(p->acq_paths));
 	  break;
 	case 'n':
+	  p->acq_flags |= OPT_NAME;
 	  bzero(p->acq_mt->pattern, LINE_MAX);
 	  strncpy(p->acq_mt->pattern, optarg, LINE_MAX);
 	  break;
 	case 'r':
+	  p->acq_flags |= OPT_REGEX;
 	  bzero(p->acq_mt->pattern, LINE_MAX);
 	  strncpy(p->acq_mt->pattern, optarg, LINE_MAX);
 	  break;
@@ -76,8 +76,7 @@ lookup_options(int argc, char *argv[], plan_t *p)
 	  p->acq_flags |= OPT_SORT;
 	  break;
 	case 'v':
-	  display_version();
-	  ret = -1;
+	  p->acq_flags |= OPT_VERSION;
 	  break;
 	case 'x':
 	  p->acq_flags |= OPT_XDEV;
@@ -122,45 +121,14 @@ lookup_options(int argc, char *argv[], plan_t *p)
 	  p->acq_flags |= OPT_STAT;
 	  break;
 	case 'P':
+	  p->acq_flags |= OPT_LSTAT;
 	  break;
 	default:
-	  display_usage();
-	  ret = -1;
+	  p->acq_flags |= OPT_USAGE;
 	  break;
 	}
 
   return (ret);
-}
-
-void
-display_usage(void)
-{  
-  static const char *usage = "usage:\t%s [-EILPsxv]\
- ...\
- [-f|--path ...]\
- [-n|--name ...]\
- [-r|--regex ...]\
- [-t|--type ...]\
- [...]\n\
- \t%s [-EILPsxv]\
- -f|--path ...\
- [...]\
- [-n|--name ...]\
- [-r|--regex ...]\
- [-t|--type ...]\
- [...]\n";
-
-  (void)fprintf(stderr,	usage,
-				SEARCH_NAME, SEARCH_NAME);
-  return;
-}
-
-void
-display_version(void)
-{  
-  (void)fprintf(stderr,	"%s version %s\n",
-				SEARCH_NAME, SEARCH_VERSION);
-  return;
 }
 
 static void

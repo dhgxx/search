@@ -28,11 +28,26 @@
  */
 
 extern int lookup_options(int, char *[], plan_t *);
-extern int comp_regex(match_t *);
 extern int s_regex(const char *, plan_t *);
 extern int s_name(const char *, plan_t *);
+extern int s_gettype(const char *, plan_t *);
+extern int s_gid(const char *, plan_t *);
+extern int s_uid(const char *, plan_t *);
+extern int s_empty(const char *, plan_t *);
+extern int s_xdev(const char *, plan_t *);
+extern int s_sort(const char *, plan_t *);
+extern int s_stat(const char *, plan_t *);
+extern int s_lstat(const char *, plan_t *);
+extern int s_delete(const char *, plan_t *);
+extern int s_path(const char *, plan_t *);
+extern int s_version(const char *, plan_t *);
+extern int s_usage(const char *, plan_t *);
 extern void walk_through(const char *, const char *, plan_t *);
-extern void display_usage(void);
-extern void display_version(void);
+
+extern int init_plan(plan_t *, plist_t *);
+extern int find_plan(int, char **, plan_t *);
+extern int exec_plan(plan_t *, plist_t *);
+extern void add_plan(plan_t *, plist_t *);
+extern void free_plan(plist_t *);
 
 #endif	/* _EXTERN_H_ */

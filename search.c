@@ -26,137 +26,85 @@
 
 #include "search.h"
 #include "extern.h"
+  
+extern char *optarg;
+extern int optind;
 
 plan_t plan;
+plist_t exec_list;
 
-static int init_plan(plan_t *);
-static int find_plan(int, char **, plan_t *);
-static void walk(dl_node **);
-static void free_mt(match_t **);
 static void cleanup(int);
 
 int
 main(int argc, char *argv[])
 {
   int i;
-  
-  extern char *optarg;
-  extern int optind;
+  int ret;
     
   (void)setlocale(LC_CTYPE, "");
   signal(SIGINT, cleanup);
 
-  if (init_plan(&plan) < 0) {
-	warn("init_plan()");
-	cleanup(1);
-	exit (1);
-  }
-
-  if (find_plan(argc, argv, &plan) < 0) {
-	warn("find_plan()");
+  if (init_plan(&plan, &exec_list) < 0) {
+#ifdef _DEBUG_
+	warnx("init_plan() failed!\n");
+#endif
 	cleanup(1);
 	exit (1);
   }
   
-   
-  if (plan.acq_flags & OPT_SORT)
-	dl_sort(&(plan.acq_paths));
-  dl_foreach(&(plan.acq_paths), walk);
-
-  cleanup(1);
-  exit(0);
-}
-
-static int
-init_plan(plan_t *p)
-{
-  if (p == NULL)
-	return (-1);
-  
-  if ((p->acq_mt = (match_t *)malloc(sizeof(match_t))) == NULL ||
-	  (p->acq_args = (args_t *)malloc(sizeof(args_t))) == NULL ||
-	  (p->acq_paths = dl_init()) == NULL) {
+  if (lookup_options(argc, argv, &plan) < 0) {
+#ifdef _DEBUG_
+	warnx("lookup_options() failed!\n");
+#endif
 	cleanup(1);
-	return (-1);
+	exit (1);
   }
-    
-  return (0);
-}
-
-static int
-find_plan(int argc, char **argv, plan_t *p)
-{
-  int i;
-  
-  if (lookup_options(argc, argv, p) < 0) {
-	warn("lookup_options()");
-	return (-1);
-  }
-  
   argc -= optind;
   argv += optind;
-    
-  if (comp_regex(p->acq_mt) < 0) {
-	return (-1);
-  }
-
-  if (argc == 0 && dl_empty(&(p->acq_paths))) {
-	display_usage();
-	return (-1);
-  }
   
-  if (argc > 0) {
-	for (i = 0; i < argc && argv[i]; i++)
-	  dl_append(argv[i], &(p->acq_paths));
+  if (find_plan(argc, argv, &plan) < 0) {
+#ifdef _DEBUG_
+	warnx("find_plan() failed!\n");
+#endif
+	cleanup(1);
+	exit (1);
   }
 
-  return (0);
-}
+  add_plan(&plan, &exec_list);
 
-static void
-walk(dl_node **n)
-{
-  dl_node *np = *n;
-  
-  if (np == NULL)
-	return;
+  ret = exec_plan(&plan, &exec_list);
 
-  walk_through(np->ent, np->ent, &plan);
-}
+#ifdef _DEBUG_
+  warnx("ret=%d\n", ret);
+#endif
 
-static void
-free_mt(match_t **m)
-{
-  match_t *mt = *m;
-
-  if (mt == NULL)
-	return;
-
-  if (&(mt->fmt) != NULL) {
-	regfree(&(mt->fmt));
-  }
-  
-  free(mt);
-  mt = NULL;
-  return;
+  cleanup(1);
+  return (ret);
 }
 
 static void
 cleanup(int sig)
 {
+  free_plan(&exec_list);
+  
   if (plan.acq_paths != NULL) {
 	dl_free(&(plan.acq_paths));
 	plan.acq_paths = NULL;
   }
   
   if (plan.acq_mt != NULL) {
-	free_mt(&(plan.acq_mt));
+	free(plan.acq_mt);
 	plan.acq_mt = NULL;
   }
   
   if (plan.acq_args != NULL) {
 	free(plan.acq_args);
 	plan.acq_args = NULL;
+  }
+
+  if (plan.nstat != NULL) {
+	free(plan.nstat);
+	plan.nstat = NULL;
   }
   
   if (sig)

@@ -33,55 +33,25 @@
 static unsigned int delete = 0;
 
 static void out(const char *);
-static int s_gettype(const char *, plan_t *);
-static int tell_group(const char *, const gid_t);
-static int tell_user(const char *, const uid_t);
-static void dislink(const char *, node_t);
+static void dislink(const char *, NODE);
 static void list_clear(DLIST **);
+static int comp_regex(match_t *);
 
-int comp_regex(match_t *);
 int s_regex(const char *, plan_t *);
 int s_name(const char *, plan_t *);
+int s_gettype(const char *, plan_t *);
+int s_gid(const char *, plan_t *);
+int s_uid(const char *, plan_t *);
+int s_empty(const char *, plan_t *);
+int s_xdev(const char *, plan_t *);
+int s_sort(const char *, plan_t *);
+int s_stat(const char *, plan_t *);
+int s_lstat(const char *, plan_t *);
+int s_delete(const char *, plan_t *);
+int s_path(const char *, plan_t *);
+int s_version(const char *, plan_t *);
+int s_usage(const char *, plan_t *);
 void walk_through(const char *, const char *, plan_t *);
-
-int
-comp_regex(match_t *mt)
-{
-  int ret;
-  unsigned int plen, mflag;
-  char msg[LINE_MAX];
-  char *pattern;
-  static regex_t *fmt;
-
-  if (mt == NULL)
-	return (-1);
-  
-  mflag = mt->mflag;
-  plen = strlen(mt->pattern);
-    
-  bzero(msg, LINE_MAX);
-  fmt = &(mt->fmt);
-
-  /* defaults to search all types. */
-  if (plen == 0)
-	pattern = ".*";
-  else
-	pattern = mt->pattern;
-
-  ret = regcomp(fmt, pattern, mflag);
-
-  if (ret != 0) {
-	if (regerror(ret, fmt, msg, LINE_MAX) > 0) {
-	  warnx("%s: %s",
-			pattern, msg);
-	} else {
-	  warn("%s", pattern);
-	}
-	regfree(fmt);
-	return (-1);
-  }
-  return (0);
-}
 
 int
 s_regex(const char *d_name, plan_t *p)
@@ -96,6 +66,8 @@ s_regex(const char *d_name, plan_t *p)
   if (p == NULL)
 	return (-1);
   if (p->acq_mt == NULL)
+	return (-1);
+  if (comp_regex(p->acq_mt) < 0)
 	return (-1);
 
   fmt = &(p->acq_mt->fmt);
@@ -162,6 +134,188 @@ s_name(const char *d_name, plan_t *p)
   
   matched = fnmatch(pattern, d_name, mflag);
   return ((matched == 0) ? (0) : (-1));
+}
+
+int
+s_gettype(const char *d_name, plan_t *p)
+{
+  int ret;
+  static struct stat stbuf;
+
+  if (d_name == NULL)
+	return (NT_ERROR);
+  if (p == NULL)
+	return (NT_ERROR);
+  if (p->nstat == NULL)
+	return (NT_ERROR);
+
+  if (p->acq_flags & OPT_STAT)
+	ret = stat(d_name, &stbuf);
+  else
+	ret = lstat(d_name, &stbuf);
+
+  if (ret < 0) {
+	warn("s_gettype()");
+	return (-1);
+  }
+
+  p->nstat->gid = stbuf.st_gid;
+  p->nstat->uid = stbuf.st_uid;
+  p->nstat->dev = stbuf.st_dev;
+
+  if (S_ISBLK(stbuf.st_mode))
+	p->nstat->type = NT_ISBLK;
+  if (S_ISCHR(stbuf.st_mode))
+	p->nstat->type = NT_ISCHR;
+  if (S_ISDIR(stbuf.st_mode))
+	p->nstat->type = NT_ISDIR;
+  if (S_ISFIFO(stbuf.st_mode))
+	p->nstat->type = NT_ISFIFO;
+  if (S_ISLNK(stbuf.st_mode))
+	p->nstat->type = NT_ISLNK;
+  if (S_ISREG(stbuf.st_mode))
+	p->nstat->type = NT_ISREG;
+  if (S_ISSOCK(stbuf.st_mode))
+	p->nstat->type = NT_ISSOCK;
+  
+  if (stbuf.st_size == 0)
+	p->nstat->empty = 1;
+  else
+	p->nstat->empty = 0;
+  
+  return (0);
+}
+
+
+int
+s_gid(const char *name __unused, plan_t *p)
+{
+  gid_t id;
+  char *s;
+  static struct group *grp;
+
+  if (p == NULL)
+	return (-1);
+  if (p->acq_args == NULL)
+	return (-1);
+  if (p->nstat == NULL)
+	return (-1);
+  if (p->nstat->uid < 0)
+	return (-1);
+  
+  id = strtol(p->acq_args->sgid, &s, 0);
+  if (s[0] == '\0')
+	grp = getgrgid(id);
+  else
+	grp = getgrnam(s);
+  
+  if (grp == NULL) {
+	warnx("--group: %s: no such group", p->acq_args->sgid);
+	return (-1);
+  }
+
+  if (grp->gr_gid == p->nstat->gid)
+	return (0);
+  
+  return (-1);
+}
+
+int
+s_uid(const char *name __unused, plan_t *p)
+{
+  uid_t id;
+  char *s;
+  static struct passwd *pwd;
+
+  if (p == NULL)
+	return (-1);
+  if (p->acq_args == NULL)
+	return (-1);
+  if (p->nstat == NULL)
+	return (-1);
+  
+  id = strtol(p->acq_args->suid, &s, 0);
+  if (s[0] == '\0')
+	pwd = getpwuid(id);
+  else
+	pwd = getpwnam(s);
+  
+  if (pwd == NULL) {
+	warnx("--user: %s: no such user", p->acq_args->suid);
+	return (-1);
+  }
+
+  if (pwd->pw_uid == p->nstat->uid)
+	return (0);
+  
+  return (-1);
+}
+
+int s_empty(const char *name __unused, plan_t *p)
+{
+  if (p == NULL)  
+	return (-1);
+  if (p->nstat == NULL)
+	return (-1);
+
+  if (p->nstat->empty)
+	return (0);
+
+  return (-1);
+}
+
+int s_xdev(const char *name __unused, plan_t *p)
+{
+  if (p == NULL)
+	return (-1);
+  if (p->acq_args == NULL)
+	return (-1);
+  if (p->nstat == NULL)
+	return (-1);
+
+  if (p->acq_args->odev == 0)
+	p->acq_args->odev = p->nstat->dev;
+  if (p->nstat->dev != p->acq_args->odev)
+	return (-1);
+
+  return (0);
+}
+
+int s_sort(const char *name __unused, plan_t *p) {
+
+  if (p == NULL)
+	return (-1);
+  if (p->acq_paths == NULL)
+	return (-1);
+  if (dl_empty(&(p->acq_paths)))
+	return (-1);
+
+  dl_sort(&(p->acq_paths));
+  return (0);
+}
+
+int s_stat(const char *name, plan_t *p) {
+  return (-1);
+}
+
+int s_lstat(const char *name, plan_t *p) {
+  return (-1);
+}
+
+int s_delete(const char *name, plan_t *p) {
+  return (-1);
+}
+
+int s_path(const char *name __unused, plan_t *p)
+{
+  if (p == NULL)
+	return (-1);
+  if (p->acq_paths == NULL)
+	return (-1);
+  if (dl_empty(&(p->acq_paths)))
+	return (-1);
+
+  return (0);
 }
 
 void
@@ -283,6 +437,45 @@ walk_through(const char *n_name, const char *d_name, plan_t *p)
   return;
 }
 
+static int
+comp_regex(match_t *mt)
+{
+  int ret;
+  unsigned int plen, mflag;
+  char msg[LINE_MAX];
+  char *pattern;
+  static regex_t *fmt;
+
+  if (mt == NULL)
+	return (-1);
+  
+  mflag = mt->mflag;
+  plen = strlen(mt->pattern);
+    
+  bzero(msg, LINE_MAX);
+  fmt = &(mt->fmt);
+
+  /* defaults to search all types. */
+  if (plen == 0)
+	pattern = ".*";
+  else
+	pattern = mt->pattern;
+
+  ret = regcomp(fmt, pattern, mflag);
+
+  if (ret != 0) {
+	if (regerror(ret, fmt, msg, LINE_MAX) > 0) {
+	  warnx("%s: %s",
+			pattern, msg);
+	} else {
+	  warn("%s", pattern);
+	}
+	regfree(fmt);
+	return (-1);
+  }
+  return (0);
+}
+
 static void
 out(const char *s)
 {
@@ -292,116 +485,8 @@ out(const char *s)
   (void)fprintf(stdout, "%s\n", s);
 }
 
-static int
-s_gettype(const char *d_name, plan_t *p)
-{
-  int ret;
-  static struct stat stbuf;
-
-  if (d_name == NULL)
-	return (NT_ERROR);
-  if (p == NULL)
-	return (NT_ERROR);
-  if (p->nstat == NULL)
-	return (NT_ERROR);
-
-  if (p->acq_flags & OPT_STAT)
-	ret = stat(d_name, &stbuf);
-  else
-	ret = lstat(d_name, &stbuf);
-
-  if (ret < 0) {
-	warn("%s", d_name);
-	return (-1);
-  }
-  
-  p->nstat->gid = stbuf.st_gid;
-  p->nstat->uid = stbuf.st_uid;
-  p->nstat->dev = stbuf.st_dev;
-
-  if (S_ISBLK(stbuf.st_mode))
-	p->nstat->type = NT_ISBLK;
-  if (S_ISCHR(stbuf.st_mode))
-	p->nstat->type = NT_ISCHR;
-  if (S_ISDIR(stbuf.st_mode))
-	p->nstat->type = NT_ISDIR;
-  if (S_ISFIFO(stbuf.st_mode))
-	p->nstat->type = NT_ISFIFO;
-  if (S_ISLNK(stbuf.st_mode))
-	p->nstat->type = NT_ISLNK;
-  if (S_ISREG(stbuf.st_mode))
-	p->nstat->type = NT_ISREG;
-  if (S_ISSOCK(stbuf.st_mode))
-	p->nstat->type = NT_ISSOCK;
-  
-  if (stbuf.st_size == 0)
-	p->nstat->empty = 1;
-  else
-	p->nstat->empty = 0;
-  
-  return (0);
-}
-
-static int
-tell_group(const char *sgid, const gid_t gid)
-{
-  gid_t id;
-  char *p;
-  static struct group *grp;
-  
-  if (sgid == NULL)
-	return (-1);
-
-  if (gid < 0)
-	return (-1);
-
-  id = strtol(sgid, &p, 0);
-  if (p[0] == '\0')
-	grp = getgrgid(id);
-  else
-	grp = getgrnam(p);
-  
-  if (grp == NULL) {
-	errx(0, "--group: %s: no such group", sgid);
-  }
-
-  if (grp->gr_gid == gid)
-	return (0);
-  
-  return (-1);
-}
-
-static int
-tell_user(const char *suid, const uid_t uid)
-{
-  uid_t id;
-  char *p;
-  static struct passwd *pwd;
-
-  if (suid == NULL)
-	return (-1);
-
-  if (uid < 0)
-	return (-1);
-  
-  id = strtol(suid, &p, 0);
-  if (p[0] == '\0')
-	pwd = getpwuid(id);
-  else
-	pwd = getpwnam(p);
-  
-  if (pwd == NULL) {
-	errx(0, "--user: %s: no such user", suid);
-  }
-
-  if (pwd->pw_uid == uid)
-	return (0);
-  
-  return (-1);
-}
-
 static void
-dislink(const char *path, node_t type)
+dislink(const char *path, NODE type)
 {  
   if (path == NULL)
 	return;
@@ -436,4 +521,37 @@ list_clear(DLIST **list)
   dl_free(&listp);
   listp = NULL;
 }
+
+int
+s_usage(const char *s __unused, plan_t *p __unused)
+{  
+  static const char *usage = "usage:\t%s [-EILPsxv]\
+ ...\
+ [-f|--path ...]\
+ [-n|--name ...]\
+ [-r|--regex ...]\
+ [-t|--type ...]\
+ [...]\n\
+ \t%s [-EILPsxv]\
+ -f|--path ...\
+ [...]\
+ [-n|--name ...]\
+ [-r|--regex ...]\
+ [-t|--type ...]\
+ [...]\n";
+
+  (void)fprintf(stderr,	usage,
+				SEARCH_NAME, SEARCH_NAME);
+  return (0);
+}
+
+int
+s_version(const char *s __unused, plan_t *p __unused)
+{  
+  (void)fprintf(stderr,	"%s version %s\n",
+				SEARCH_NAME, SEARCH_VERSION);
+  return (0);
+}
+
+
 

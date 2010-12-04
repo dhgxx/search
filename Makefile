@@ -18,9 +18,9 @@ OPT_LIB=		-L${OPT_LIBDIR} -lmi
 
 PROG=			search
 MAN=			${PROG}.1
-SRCS=			functions.c options.c search.c
+SRCS=			functions.c options.c plan.c search.c
 HDRS=			extern.h search.h
-OBJS=			functions.o options.o search.o
+OBJS=			functions.o options.o plan.o search.o
 
 .if defined(CFLAGS)
 MYCFLAGS=		${CFLAGS} -D_${OSNAME}_
@@ -30,19 +30,21 @@ MYCFLAGS=		-O2 -pipe -D_{OSNAME}_
 
 .if defined(DEBUG)
 STRIP=
-MYCFLAGS+=		-ggdb -D_DEBUG_
+MYCFLAGS+=		-D_DEBUG_
 .else
 STRIP=			-s
 .endif
 
 .if ${OSNAME} == "FreeBSD"
 CC=			clang
+MYCFLAGS+=		-g
 BINGRP=			wheel
 MFILE=			${MAN}.gz
 MANDIR=			${OPT_MANDIR}/man1
 MKWHATIS=		/usr/bin/makewhatis
 .elif ${OSNAME} == "OpenBSD"
 CC=			cc
+MYCFLAGS+=		-ggdb
 BINGRP=			bin
 MFILE=			${MAN:S/.1$/.cat0/g}
 MANDIR=			${OPT_MANDIR}/cat1
