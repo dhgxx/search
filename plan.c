@@ -20,7 +20,7 @@ static const FLAGS flags[] = {
 
 int init_plan(plan_t *, plist_t *);
 int find_plan(int, char **, plan_t *);
-int exec_plan(plan_t *, plist_t *);
+int execute_plan(plan_t *, plist_t *);
 void add_plan(plan_t *, plist_t *);
 void free_plan(plist_t *);
 
@@ -103,6 +103,14 @@ add_plan(plan_t *p, plist_t *pl)
 	pl->size = 1;
 	return;	
   }
+
+  if ((pl->start = (PLAN *)malloc(sizeof(PLAN))) == NULL)
+	return;
+
+  pl->start->s_func = &s_gettype;
+  pl->start->next = NULL;
+  pl->cur = pl->start;
+  pl->size = 1;
   
   for (i = 0;  flags[i].s_func != NULL; i++) {
 	if (p->acq_flags & flags[i].opt) {
@@ -134,7 +142,7 @@ add_plan(plan_t *p, plist_t *pl)
 }
 
 int
-exec_plan(plan_t *p, plist_t *pl)
+execute_plan(plan_t *p, plist_t *pl)
 {
   if (p == NULL)
 	return (-1);
@@ -154,13 +162,15 @@ exec_plan(plan_t *p, plist_t *pl)
   while (p->acq_paths->cur != NULL) {
 	pl->cur = pl->start;
 	while (pl->cur != NULL) {
-	  pl->retval = pl->cur->retval = pl->cur->s_func(p->acq_paths->cur->ent, p);
+	  pl->retval |= (pl->cur->retval = pl->cur->s_func(p->acq_paths->cur->ent, p));
 #ifdef _DEBUG_
 	  warnx("pl->cur->retval=%d, pl->retval=%d\n",
 			pl->cur->retval, pl->retval);
 #endif
 	  pl->cur = pl->cur->next;
 	}
+	if (pl->retval == 0)
+	  (void)fprintf(stdout, "%s\n", p->acq_paths->cur->ent);
 	p->acq_paths->cur = p->acq_paths->cur->next;
   }
 

@@ -46,7 +46,7 @@ extern void walk_through(const char *, const char *, plan_t *);
 
 extern int init_plan(plan_t *, plist_t *);
 extern int find_plan(int, char **, plan_t *);
-extern int exec_plan(plan_t *, plist_t *);
+extern int execute_plan(plan_t *, plist_t *);
 extern void add_plan(plan_t *, plist_t *);
 extern void free_plan(plist_t *);
 
