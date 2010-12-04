@@ -19,7 +19,7 @@ OPT_LIB=		-L${OPT_LIBDIR} -lmi
 PROG=			search
 MAN=			${PROG}.1
 SRCS=			functions.c plan.c search.c
-HDRS=			extern.h search.h
+HDRS=			search.h
 OBJS=			functions.o plan.o search.o
 
 .if ${OSNAME} == "FreeBSD"

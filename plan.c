@@ -1,5 +1,19 @@
 #include "search.h"
-#include "extern.h"
+
+extern int s_regex(const char *, plan_t *);
+extern int s_name(const char *, plan_t *);
+extern int s_gettype(const char *, plan_t *);
+extern int s_gid(const char *, plan_t *);
+extern int s_uid(const char *, plan_t *);
+extern int s_empty(const char *, plan_t *);
+extern int s_xdev(const char *, plan_t *);
+extern int s_sort(const char *, plan_t *);
+extern int s_stat(const char *, plan_t *);
+extern int s_lstat(const char *, plan_t *);
+extern int s_delete(const char *, plan_t *);
+extern int s_path(const char *, plan_t *);
+extern int s_version(const char *, plan_t *);
+extern int s_usage(const char *, plan_t *);
 
 static const FLAGS flags[] = {
   { OPT_EMPTY,   &s_empty   },

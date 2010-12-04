@@ -24,19 +24,45 @@
  *
  */
 
+#include <getopt.h>
+
 #include "search.h"
-#include "extern.h"
   
 extern char *optarg;
 extern int optind;
+
+extern int init_plan(plan_t *, plist_t *);
+extern int find_plan(int, char **, plan_t *);
+extern int execute_plan(plan_t *, plist_t *);
+extern void add_plan(plan_t *, plist_t *);
+extern void free_plan(plist_t *);
+
+static int opt_empty;
+static int opt_delete;
 
 static int lookup_options(int, char *[], plan_t *);
 static void ftype_err(const char *);
 static void cleanup(int);
 
+static struct option longopts[] = {
+	{ "gid",     required_argument, NULL,        2  },
+	{ "group",   required_argument, NULL,        3  },
+	{ "path",    required_argument, NULL,       'f' },
+	{ "name",    required_argument, NULL,       'n' },
+	{ "regex",   required_argument, NULL,       'r' },
+	{ "type",    required_argument, NULL,       't' },
+	{ "user",    required_argument, NULL,        4  },
+	{ "uid",     required_argument, NULL,        5  },
+	{ "empty",   no_argument,       &opt_empty,  1  },
+	{ "delete",  no_argument,       &opt_delete, 1  },
+	{ "sort",    no_argument,       NULL,       's' },
+	{ "version", no_argument,       NULL,       'v' },
+	{ "xdev",    no_argument,       NULL,       'x' },
+	{ NULL,      0,                 NULL,        0  }
+  };
+
 plan_t plan;
 plist_t exec_list;
-
 
 int
 main(int argc, char *argv[])
@@ -89,26 +115,7 @@ static int
 lookup_options(int argc, char *argv[], plan_t *p)
 {
   int ch, ret;
-  static int opt_empty;
-  static int opt_delete;
   
-  static struct option longopts[] = {
-	{ "gid",     required_argument, NULL,        2  },
-	{ "group",   required_argument, NULL,        3  },
-	{ "path",    required_argument, NULL,       'f' },
-	{ "name",    required_argument, NULL,       'n' },
-	{ "regex",   required_argument, NULL,       'r' },
-	{ "type",    required_argument, NULL,       't' },
-	{ "user",    required_argument, NULL,        4  },
-	{ "uid",     required_argument, NULL,        5  },
-	{ "empty",   no_argument,       &opt_empty,  1  },
-	{ "delete",  no_argument,       &opt_delete, 1  },
-	{ "sort",    no_argument,       NULL,       's' },
-	{ "version", no_argument,       NULL,       'v' },
-	{ "xdev",    no_argument,       NULL,       'x' },
-	{ NULL,      0,                 NULL,        0  }
-  };
-
   if (p == NULL ||
 	  p->acq_mt == NULL ||
 	  p->acq_args == NULL)
