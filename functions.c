@@ -36,7 +36,6 @@ static unsigned int delete = 0;
 static int gettype(const char *, plan_t *);
 static void out(const char *);
 static void dislink(const char *, NODE);
-static void list_clear(DLIST **);
 static int comp_regex(match_t *);
 static void walk_through(const char *, plan_t *);
 
@@ -317,7 +316,10 @@ int s_path(const char *name __unused, plan_t *p)
   p->acq_paths->cur = p->acq_paths->head;
   while (p->acq_paths->cur != NULL) {
 	walk_through(p->acq_paths->cur->ent, p);
-	p->acq_paths->cur = p->acq_paths->cur->next;
+	if (p->acq_paths->cur != NULL) {
+	  p->acq_paths->cur = p->acq_paths->cur->next;
+	}
+	dl_clear(&(p->acq_paths));
   }
 
   return (0);
@@ -341,10 +343,8 @@ walk_through(const char *name, plan_t *p)
 	return;
   }
 
-  out(name);
-  dl_append(name, &(p->acq_paths));
-
   if (p->nstat->type != NT_ISDIR) {
+	dl_append(name, &(p->acq_paths));
 	return;
   }
   
@@ -352,7 +352,7 @@ walk_through(const char *name, plan_t *p)
 	warn("%s", name);
 	return;
   }
-
+  
   while (NULL != (dir = readdir(dirp))) {
 	
 	if ((0 == strncmp(dir->d_name, ".", strlen(dir->d_name) + 1)) ||
@@ -365,11 +365,13 @@ walk_through(const char *name, plan_t *p)
 	if ('/' != tmp_buf[strlen(tmp_buf) - 1])
 	  strncat(tmp_buf, "/", MAXPATHLEN);
 	strncat(tmp_buf, dir->d_name, MAXPATHLEN);
-	
-	walk_through(tmp_buf, p);
+
+	out(tmp_buf);
+	dl_append(tmp_buf, &(p->acq_paths));
   }
   
   closedir(dirp);
+
   return;
 }
 
@@ -444,18 +446,6 @@ dislink(const char *path, NODE type)
 	  warn("--unlink(%s)", path);
 	}
   }
-}
-
-static void
-list_clear(DLIST **list)
-{
-  DLIST *listp = *list;
-  
-  if (listp == NULL)
-	return;
-
-  dl_free(&listp);
-  listp = NULL;
 }
 
 int

@@ -214,7 +214,7 @@ cleanup(int sig)
 {
   free_plan(&exec_list);
   
-  if (!dl_empty(&(plan.acq_paths))) {
+  if (plan.acq_paths) {
 	dl_free(&(plan.acq_paths));
 	plan.acq_paths = NULL;
   }
