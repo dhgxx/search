@@ -115,11 +115,11 @@ execute_plan(plan_t *p, plist_t *pl)
 	return (plan_execute(NULL, p, pl));
   }
   
-  p->acq_paths->cur = p->acq_paths->head;
-  while (p->acq_paths->cur != NULL) {
-	ret = plan_execute(p->acq_paths->cur->ent, p, pl);
-	p->acq_paths->cur = p->acq_paths->cur->next;
-  }
+  //p->acq_paths->cur = p->acq_paths->head;
+  //while (p->acq_paths->cur != NULL) {
+  ret = plan_execute(p->acq_paths->cur->ent, p, pl);
+  //p->acq_paths->cur = p->acq_paths->cur->next;
+  //}
 
   return (ret);
 }
