@@ -108,7 +108,6 @@ typedef struct _plan_t {
 } plan_t;
 
 typedef struct _plan {
-  int retval;
   int (*s_func) (const char *, struct _plan_t *);
   struct _plan *next;
 } PLAN;

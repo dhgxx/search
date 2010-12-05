@@ -34,13 +34,12 @@ extern int optind;
 extern int init_plan(plan_t *, plist_t *);
 extern int find_plan(int, char **, plan_t *);
 extern int execute_plan(plan_t *, plist_t *);
-extern void add_plan(plan_t *, plist_t *);
+extern int add_plan(plan_t *, plist_t *);
 extern void free_plan(plist_t *);
 
 static int opt_empty;
 static int opt_delete;
 
-static int lookup_options(int, char *[], plan_t *);
 static void ftype_err(const char *);
 static void cleanup(int);
 
@@ -67,7 +66,7 @@ plist_t exec_list;
 int
 main(int argc, char *argv[])
 {
-  int i;
+  int i, ch;
   int ret;
     
   (void)setlocale(LC_CTYPE, "");
@@ -80,17 +79,100 @@ main(int argc, char *argv[])
 	cleanup(1);
 	exit (1);
   }
-  
-  if (lookup_options(argc, argv, &plan) < 0) {
-#ifdef _DEBUG_
-	warnx("lookup_options() failed!\n");
-#endif
-	cleanup(1);
-	exit (1);
-  }
+
+  while ((ch = getopt_long(argc, argv, "EILPsvxf:n:r:t:", longopts, NULL)) != -1)
+	switch (ch) {
+	case 2:
+	case 3:
+	  plan.acq_flags |= OPT_GRP;
+	  bzero(plan.acq_args->sgid, LINE_MAX);
+	  strncpy(plan.acq_args->sgid, optarg, LINE_MAX);
+	  break;
+	case 4:
+	case 5:
+	  plan.acq_flags |=  OPT_USR;
+	  bzero(plan.acq_args->suid, LINE_MAX);
+	  strncpy(plan.acq_args->suid, optarg, LINE_MAX);
+	  break;
+	case 'f':
+	  plan.acq_flags |= OPT_PATH;
+	  dl_append(optarg, &(plan.acq_paths));
+	  break;
+	case 'n':
+	  plan.acq_flags |= OPT_NAME;
+	  bzero(plan.acq_mt->pattern, LINE_MAX);
+	  strncpy(plan.acq_mt->pattern, optarg, LINE_MAX);
+	  break;
+	case 'r':
+	  plan.acq_flags |= OPT_REGEX;
+	  bzero(plan.acq_mt->pattern, LINE_MAX);
+	  strncpy(plan.acq_mt->pattern, optarg, LINE_MAX);
+	  break;
+	case 0:
+	  if (opt_empty == 1)
+		plan.acq_flags |= OPT_EMPTY;
+	  if (opt_delete == 1)
+		plan.acq_flags |=  OPT_DEL;
+	  break;
+	case 's':
+	  plan.acq_flags |= OPT_SORT;
+	  break;
+	case 'v':
+	  plan.acq_flags |= OPT_VERSION;
+	  break;
+	case 'x':
+	  plan.acq_flags |= OPT_XDEV;
+	  break;
+	case 't':
+	  switch (optarg[0]) {
+	  case 'p':
+		plan.acq_args->type = NT_ISFIFO;
+		break;
+	  case 'c':
+		plan.acq_args->type = NT_ISCHR;
+		break;
+	  case 'd':
+		plan.acq_args->type = NT_ISDIR;
+		break;
+	  case 'b':
+		plan.acq_args->type = NT_ISBLK;
+		break;
+	  case 'l':
+		plan.acq_args->type = NT_ISLNK;
+		break;
+	  case 's':
+		plan.acq_args->type = NT_ISSOCK;
+		break;
+	  case 'f':
+	  case '\0':
+		plan.acq_args->type = NT_ISREG;
+		break;
+	  default:
+		ftype_err(optarg);
+		cleanup(1);
+		exit (1);
+	  }
+	  break;
+	case 'E':
+	  plan.acq_mt->mflag |= REG_EXTENDED;
+	  break;
+	case 'I':
+	  plan.acq_mt->mflag |= REG_ICASE;
+	  break;
+	case 'L':
+	  plan.acq_flags |= OPT_STAT;
+	  break;
+	case 'P':
+	  plan.acq_flags |= OPT_LSTAT;
+	  break;
+	default:
+	  plan.acq_flags |= OPT_USAGE;
+	  break;
+	}
+
   argc -= optind;
   argv += optind;
-  
+
   if (find_plan(argc, argv, &plan) < 0) {
 #ifdef _DEBUG_
 	warnx("find_plan() failed!\n");
@@ -98,8 +180,14 @@ main(int argc, char *argv[])
 	cleanup(1);
 	exit (1);
   }
-
-  add_plan(&plan, &exec_list);
+  
+  if (add_plan(&plan, &exec_list) < 0) {
+#ifdef _DEBUG_
+	warnx("add_plan() failed!\n");
+#endif
+	cleanup(1);
+	exit (1);
+  }
 
   ret = execute_plan(&plan, &exec_list);
 
@@ -108,111 +196,6 @@ main(int argc, char *argv[])
 #endif
 
   cleanup(1);
-  return (ret);
-}
-
-static int
-lookup_options(int argc, char *argv[], plan_t *p)
-{
-  int ch, ret;
-  
-  if (p == NULL ||
-	  p->acq_mt == NULL ||
-	  p->acq_args == NULL)
-	return (-1);
-
-  ret = 0;
-
-  while ((ch = getopt_long(argc, argv, "EILPsvxf:n:r:t:", longopts, NULL)) != -1)
-	switch (ch) {
-	case 2:
-	case 3:
-	  p->acq_flags |= OPT_GRP;
-	  bzero(p->acq_args->sgid, LINE_MAX);
-	  strncpy(p->acq_args->sgid, optarg, LINE_MAX);
-	  break;
-	case 4:
-	case 5:
-	  p->acq_flags |=  OPT_USR;
-	  bzero(p->acq_args->suid, LINE_MAX);
-	  strncpy(p->acq_args->suid, optarg, LINE_MAX);
-	  break;
-	case 'f':
-	  p->acq_flags |= OPT_PATH;
-	  dl_append(optarg, &(p->acq_paths));
-	  break;
-	case 'n':
-	  p->acq_flags |= OPT_NAME;
-	  bzero(p->acq_mt->pattern, LINE_MAX);
-	  strncpy(p->acq_mt->pattern, optarg, LINE_MAX);
-	  break;
-	case 'r':
-	  p->acq_flags |= OPT_REGEX;
-	  bzero(p->acq_mt->pattern, LINE_MAX);
-	  strncpy(p->acq_mt->pattern, optarg, LINE_MAX);
-	  break;
-	case 0:
-	  if (opt_empty == 1)
-		p->acq_flags |= OPT_EMPTY;
-	  if (opt_delete == 1)
-		p->acq_flags |=  OPT_DEL;
-	  break;
-	case 's':
-	  p->acq_flags |= OPT_SORT;
-	  break;
-	case 'v':
-	  p->acq_flags |= OPT_VERSION;
-	  break;
-	case 'x':
-	  p->acq_flags |= OPT_XDEV;
-	  break;
-	case 't':
-	  switch (optarg[0]) {
-	  case 'p':
-		p->acq_args->type = NT_ISFIFO;
-		break;
-	  case 'c':
-		p->acq_args->type = NT_ISCHR;
-		break;
-	  case 'd':
-		p->acq_args->type = NT_ISDIR;
-		break;
-	  case 'b':
-		p->acq_args->type = NT_ISBLK;
-		break;
-	  case 'l':
-		p->acq_args->type = NT_ISLNK;
-		break;
-	  case 's':
-		p->acq_args->type = NT_ISSOCK;
-		break;
-	  case 'f':
-	  case '\0':
-		p->acq_args->type = NT_ISREG;
-		break;
-	  default:
-		ftype_err(optarg);
-		ret = -1;
-		break;
-	  }
-	  break;
-	case 'E':
-	  p->acq_mt->mflag |= REG_EXTENDED;
-	  break;
-	case 'I':
-	  p->acq_mt->mflag |= REG_ICASE;
-	  break;
-	case 'L':
-	  p->acq_flags |= OPT_STAT;
-	  break;
-	case 'P':
-	  p->acq_flags |= OPT_LSTAT;
-	  break;
-	default:
-	  p->acq_flags |= OPT_USAGE;
-	  break;
-	}
-
   return (ret);
 }
 
@@ -231,7 +214,7 @@ cleanup(int sig)
 {
   free_plan(&exec_list);
   
-  if (plan.acq_paths != NULL) {
+  if (!dl_empty(&(plan.acq_paths))) {
 	dl_free(&(plan.acq_paths));
 	plan.acq_paths = NULL;
   }

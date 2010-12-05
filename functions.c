@@ -32,14 +32,16 @@
 
 static unsigned int delete = 0;
 
+
+static int gettype(const char *, plan_t *);
 static void out(const char *);
 static void dislink(const char *, NODE);
 static void list_clear(DLIST **);
 static int comp_regex(match_t *);
+static void walk_through(const char *, plan_t *);
 
 int s_regex(const char *, plan_t *);
 int s_name(const char *, plan_t *);
-int s_gettype(const char *, plan_t *);
 int s_gid(const char *, plan_t *);
 int s_uid(const char *, plan_t *);
 int s_empty(const char *, plan_t *);
@@ -51,17 +53,16 @@ int s_delete(const char *, plan_t *);
 int s_path(const char *, plan_t *);
 int s_version(const char *, plan_t *);
 int s_usage(const char *, plan_t *);
-void walk_through(const char *, const char *, plan_t *);
 
 int
-s_regex(const char *d_name, plan_t *p)
+s_regex(const char *name, plan_t *p)
 {
   int ret, plen, matched;
   char *pattern, msg[LINE_MAX];
   static regex_t *fmt;
   regmatch_t pmatch;
 
-  if (d_name == NULL)
+  if (name == NULL)
 	return (-1);
   if (p == NULL)
 	return (-1);
@@ -72,14 +73,14 @@ s_regex(const char *d_name, plan_t *p)
 
   fmt = &(p->acq_mt->fmt);
   pattern = p->acq_mt->pattern;
-  plen = strlen(d_name);
+  plen = strlen(name);
   
   bzero(msg, LINE_MAX);
   pmatch.rm_so = 0;
   pmatch.rm_eo = plen;
   matched = 0;
 
-  ret = regexec(fmt, d_name, 1, &pmatch, REG_STARTEND);
+  ret = regexec(fmt, name, 1, &pmatch, REG_STARTEND);
 
   if (ret != 0 && ret != REG_NOMATCH) {
 	if (regerror(ret, fmt, msg, LINE_MAX) > 0) {
@@ -94,7 +95,7 @@ s_regex(const char *d_name, plan_t *p)
 
 #ifdef _DEBUG_
   warnx("exec_regex: pattern=%s, name=%s",
-		pattern, d_name);
+		pattern, name);
 #endif
   
   matched = ((ret == 0) && (pmatch.rm_so == 0) && (pmatch.rm_eo == plen));
@@ -102,13 +103,13 @@ s_regex(const char *d_name, plan_t *p)
 }
 
 int
-s_name(const char *d_name, plan_t *p)
+s_name(const char *name, plan_t *p)
 {
   int matched;
   unsigned int plen, mflag;
   char *pattern;
 
-  if (d_name == NULL)
+  if (name == NULL)
 	return (-1);
   if (p == NULL)
 	return (-1);
@@ -129,20 +130,20 @@ s_name(const char *d_name, plan_t *p)
 
 #ifdef _DEBUG_
   warnx("exec_name: pattern=%s, name=%s",
-		pattern, d_name);
+		pattern, name);
 #endif
   
-  matched = fnmatch(pattern, d_name, mflag);
+  matched = fnmatch(pattern, name, mflag);
   return ((matched == 0) ? (0) : (-1));
 }
 
 int
-s_gettype(const char *d_name, plan_t *p)
+gettype(const char *name, plan_t *p)
 {
   int ret;
   static struct stat stbuf;
 
-  if (d_name == NULL)
+  if (name == NULL)
 	return (NT_ERROR);
   if (p == NULL)
 	return (NT_ERROR);
@@ -150,12 +151,12 @@ s_gettype(const char *d_name, plan_t *p)
 	return (NT_ERROR);
 
   if (p->acq_flags & OPT_STAT)
-	ret = stat(d_name, &stbuf);
+	ret = stat(name, &stbuf);
   else
-	ret = lstat(d_name, &stbuf);
+	ret = lstat(name, &stbuf);
 
   if (ret < 0) {
-	warn("s_gettype()");
+	warn("gettype()");
 	return (-1);
   }
 
@@ -308,71 +309,47 @@ int s_delete(const char *name, plan_t *p) {
 
 int s_path(const char *name __unused, plan_t *p)
 {
-  if (p == NULL)
+  if (p == NULL ||
+	  p->acq_paths == NULL ||
+	  dl_empty(&(p->acq_paths)))
 	return (-1);
-  if (p->acq_paths == NULL)
-	return (-1);
-  if (dl_empty(&(p->acq_paths)))
-	return (-1);
+
+  p->acq_paths->cur = p->acq_paths->head;
+  while (p->acq_paths->cur != NULL) {
+	walk_through(p->acq_paths->cur->ent, p);
+	p->acq_paths->cur = p->acq_paths->cur->next;
+  }
 
   return (0);
 }
 
-void
-walk_through(const char *n_name, const char *d_name, plan_t *p)
+static void
+walk_through(const char *name, plan_t *p)
 {
-  int matched;
-  unsigned int nents;
-  char *pbase, tmp_buf[MAXPATHLEN];
+  char tmp_buf[MAXPATHLEN];
   static struct dirent *dir;
   DIR *dirp;
-  DLIST *dlist;
 
-  if (n_name == NULL)
-	return;
-  if (d_name == NULL)
-	return;
-  if (p == NULL)
-	return;
-  if (p->nstat == NULL)
+  if (name == NULL ||
+	  p == NULL ||
+	  p->nstat == NULL ||
+	  dl_empty(&(p->acq_paths)))
 	return;
     
-  if (s_gettype(n_name, p) < 0) {
-	warn("%s", n_name);
+  if (gettype(name, p) < 0) {
+	warn("%s", name);
 	return;
   }
 
-  nents = 0;
-  dlist = dl_init();
-  
-  //  matched = cook_entry(n_name, d_name, p);
+  out(name);
+  dl_append(name, &(p->acq_paths));
 
-  if (matched) {
-	if (!(p->acq_flags & OPT_DEL))
-	  out(n_name);
-	else
-	  delete = 1;
-  }
-  
   if (p->nstat->type != NT_ISDIR) {
-	if (matched && delete)
-	  dislink(n_name, p->nstat->type);
-	list_clear(&dlist);
 	return;
   }
-
-  if (p->acq_flags & OPT_XDEV) {
-	if (p->acq_args->odev == 0)
-	  p->acq_args->odev = p->nstat->dev;
-	if (p->nstat->dev != p->acq_args->odev) {
-	  list_clear(&dlist);
-	  return;
-	}
-  }
-
-  if (NULL == (dirp = opendir(n_name))) {
-	warn("%s", n_name);
-	list_clear(&dlist);
+  
+  if (NULL == (dirp = opendir(name))) {
+	warn("%s", name);
 	return;
   }
 
@@ -382,58 +359,17 @@ walk_through(const char *n_name, const char *d_name, plan_t *p)
 		(0 == strncmp(dir->d_name, "..", strlen(dir->d_name) + 1))) {
 	  continue;
 	}
-	  
-	nents++;
+
 	bzero(tmp_buf, MAXPATHLEN);
-	strncpy(tmp_buf, n_name, MAXPATHLEN);
+	strncpy(tmp_buf, name, MAXPATHLEN);
 	if ('/' != tmp_buf[strlen(tmp_buf) - 1])
 	  strncat(tmp_buf, "/", MAXPATHLEN);
 	strncat(tmp_buf, dir->d_name, MAXPATHLEN);
-	dl_append(tmp_buf, &dlist);
-  }
-
-  /* We have to count dir entries before */
-  /* we can tell if or not a directory is */
-  /* empty. If it's empty, then display it. */
-  if (p->acq_flags & OPT_EMPTY) {
-	if (p->acq_args->type == NT_ISDIR ||
-		p->acq_args->type == NT_UNKNOWN ||
-		p->nstat->type == p->acq_args->type) {
-	  if (nents == 0) {
-		if (!(p->acq_flags & OPT_DEL)) {
-		  out(n_name);
-		} else {
-		  dislink(n_name, p->nstat->type);
-		}
-
-		list_clear(&dlist);
-		closedir(dirp);
-		return;
-	  }
-	}
-  }
-
-  /* Sort the search result if */
-  /* necessary. */
-  if (p->acq_flags & OPT_SORT) {
-	dl_sort(&dlist);
-  }
-  
-  dlist->cur = dlist->head;
-  while (dlist->cur) {
-	if (dlist->cur->ent != NULL) {
-	  pbase = basename(dlist->cur->ent);
-	  walk_through(dlist->cur->ent, pbase, p);
-	}
-	dlist->cur = dlist->cur->next;
+	
+	walk_through(tmp_buf, p);
   }
   
   closedir(dirp);
-  list_clear(&dlist);
-
-  if (matched && delete)
-	dislink(n_name, p->nstat->type);
-
   return;
 }
 
