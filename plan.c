@@ -19,49 +19,50 @@ static const FLAGS flags[] = {
   { OPT_VERSION, &s_version },
   { OPT_USAGE,   &s_usage   },
   { OPT_PATH,    &s_path    },
+  { OPT_SORT,    &s_sort    },
   /* order == end == */
   { OPT_EMPTY,   &s_empty   },
   { OPT_GRP,     &s_gid     },
   { OPT_USR,     &s_uid     },
-  { OPT_XDEV,    &s_xdev    },
-  { OPT_DEL,     &s_delete  },
-  { OPT_SORT,    &s_sort    },
   { OPT_STAT,    &s_stat    },
   { OPT_LSTAT,   &s_lstat   },
   { OPT_NAME,    &s_name    },
   { OPT_REGEX,   &s_regex   },
+  { OPT_XDEV,    &s_xdev    },
+  { OPT_DEL,     &s_delete  },
   { OPT_NONE,    NULL       },
 };
 
 static int plan_add(unsigned int *, plist_t *);
-static int plan_execute(const char *, plan_t *, plist_t *);
+static int plan_execute(plan_t *);
 
-int init_plan(plan_t *, plist_t *);
+int init_plan(plan_t *);
 int find_plan(int, char **, plan_t *);
-int execute_plan(plan_t *, plist_t *);
-int add_plan(plan_t *, plist_t *);
+int execute_plan(plan_t *);
+int add_plan(plan_t *);
 void free_plan(plist_t *);
 
 int
-init_plan(plan_t *p, plist_t *pl)
-{
-  if (p == NULL || pl == NULL)
+init_plan(plan_t *p)
+{  
+  if (p == NULL)
 	return (-1);
   
-  if ((p->acq_mt = (match_t *)malloc(sizeof(match_t))) == NULL ||
-	  (p->acq_args = (args_t *)malloc(sizeof(args_t))) == NULL ||
+  if ((p->mt = (match_t *)malloc(sizeof(match_t))) == NULL ||
+	  (p->args = (args_t *)malloc(sizeof(args_t))) == NULL ||
 	  (p->nstat = (nstat_t *)malloc(sizeof(nstat_t))) == NULL ||
-	  (p->acq_paths = dl_init()) == NULL) {
+	  (p->plans = (plist_t *)malloc(sizeof(plist_t))) == NULL ||
+	  (p->paths = dl_init()) == NULL) {
 	return (-1);
   }
 
-  p->acq_mt->mflag = REG_BASIC;
-  p->acq_args->odev = 0;
-  p->acq_args->empty = 0;
-  p->acq_flags = OPT_NONE;
+  p->mt->mflag = REG_BASIC;
+  p->args->odev = 0;
+  p->args->empty = 0;
+  p->flags = OPT_NONE;
   
-  pl->cur = pl->start = NULL;
-  pl->size = 0;
+  p->plans->cur = p->plans->start = NULL;
+  p->plans->size = 0;
     
   return (0);
 }
@@ -75,8 +76,8 @@ find_plan(int argc, char **argv, plan_t *p)
 	return (-1);
   
   if (argc == 0) {
-	if (dl_empty(&(p->acq_paths))) {
-	  p->acq_flags |= OPT_USAGE;
+	if (dl_empty(&(p->paths))) {
+	  p->flags |= OPT_USAGE;
 	}
 	return (0);
   }
@@ -86,42 +87,32 @@ find_plan(int argc, char **argv, plan_t *p)
 #ifdef _DEBUG_
 	  warnx("added path %s\n", argv[i]);
 #endif
-	  ret = dl_append(argv[i], &(p->acq_paths));
+	  ret = dl_append(argv[i], &(p->paths));
 	}
-	p->acq_flags |= OPT_PATH;
+	p->flags |= OPT_PATH;
   }
 
   return (ret);
 }
 
 int
-add_plan(plan_t *p, plist_t *pl)
+add_plan(plan_t *p)
 {
-  if (p == NULL || pl == NULL)
+  if (p == NULL)
 	return (-1);
 
-  return (plan_add(&(p->acq_flags), pl));
+  return (plan_add(&(p->flags), p->plans));
 }
 
 int
-execute_plan(plan_t *p, plist_t *pl)
+execute_plan(plan_t *p)
 {
   int ret;
 
-  if (p == NULL || pl == NULL)
+  if (p == NULL)
 	return (-1);
 
-  if (dl_empty(&(p->acq_paths))) {
-	return (plan_execute(NULL, p, pl));
-  }
-  
-  //p->acq_paths->cur = p->acq_paths->head;
-  //while (p->acq_paths->cur != NULL) {
-  ret = plan_execute(p->acq_paths->cur->ent, p, pl);
-  //p->acq_paths->cur = p->acq_paths->cur->next;
-  //}
-
-  return (ret);
+  return (plan_execute(p));
 }
 
 void
@@ -208,20 +199,14 @@ plan_add(unsigned int *fl, plist_t *pl)
 }
 
 static int
-plan_execute(const char *s, plan_t *p, plist_t *pl)
+plan_execute(plan_t *p)
 {
-  if (p == NULL || pl == NULL)
+  if (p == NULL)
 	return (-1);
 
-  pl->cur = pl->start;
-
-  while (pl->cur != NULL) {
-	pl->retval |= pl->cur->s_func(s, p);
-	pl->cur = pl->cur->next;
-#ifdef _DEBUG_
-	warnx("execute plan: retval=%d\n", pl->retval);
-#endif
+  if ((p->plans->cur = p->plans->start) != NULL) {
+	return (p->plans->retval = p->plans->start->s_func(p->paths->head->ent, p));
   }
   
-  return (pl->retval);
+  return (-1);
 }

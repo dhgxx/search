@@ -31,10 +31,10 @@
 extern char *optarg;
 extern int optind;
 
-extern int init_plan(plan_t *, plist_t *);
+extern int init_plan(plan_t *);
 extern int find_plan(int, char **, plan_t *);
-extern int execute_plan(plan_t *, plist_t *);
-extern int add_plan(plan_t *, plist_t *);
+extern int execute_plan(plan_t *);
+extern int add_plan(plan_t *);
 extern void free_plan(plist_t *);
 
 static int opt_empty;
@@ -61,7 +61,6 @@ static struct option longopts[] = {
   };
 
 plan_t plan;
-plist_t exec_list;
 
 int
 main(int argc, char *argv[])
@@ -72,7 +71,7 @@ main(int argc, char *argv[])
   (void)setlocale(LC_CTYPE, "");
   signal(SIGINT, cleanup);
 
-  if (init_plan(&plan, &exec_list) < 0) {
+  if (init_plan(&plan) < 0) {
 #ifdef _DEBUG_
 	warnx("init_plan() failed!\n");
 #endif
@@ -84,68 +83,68 @@ main(int argc, char *argv[])
 	switch (ch) {
 	case 2:
 	case 3:
-	  plan.acq_flags |= OPT_GRP;
-	  bzero(plan.acq_args->sgid, LINE_MAX);
-	  strncpy(plan.acq_args->sgid, optarg, LINE_MAX);
+	  plan.flags |= OPT_GRP;
+	  bzero(plan.args->sgid, LINE_MAX);
+	  strncpy(plan.args->sgid, optarg, LINE_MAX);
 	  break;
 	case 4:
 	case 5:
-	  plan.acq_flags |=  OPT_USR;
-	  bzero(plan.acq_args->suid, LINE_MAX);
-	  strncpy(plan.acq_args->suid, optarg, LINE_MAX);
+	  plan.flags |=  OPT_USR;
+	  bzero(plan.args->suid, LINE_MAX);
+	  strncpy(plan.args->suid, optarg, LINE_MAX);
 	  break;
 	case 'f':
-	  plan.acq_flags |= OPT_PATH;
-	  dl_append(optarg, &(plan.acq_paths));
+	  plan.flags |= OPT_PATH;
+	  dl_append(optarg, &(plan.paths));
 	  break;
 	case 'n':
-	  plan.acq_flags |= OPT_NAME;
-	  bzero(plan.acq_mt->pattern, LINE_MAX);
-	  strncpy(plan.acq_mt->pattern, optarg, LINE_MAX);
+	  plan.flags |= OPT_NAME;
+	  bzero(plan.mt->pattern, LINE_MAX);
+	  strncpy(plan.mt->pattern, optarg, LINE_MAX);
 	  break;
 	case 'r':
-	  plan.acq_flags |= OPT_REGEX;
-	  bzero(plan.acq_mt->pattern, LINE_MAX);
-	  strncpy(plan.acq_mt->pattern, optarg, LINE_MAX);
+	  plan.flags |= OPT_REGEX;
+	  bzero(plan.mt->pattern, LINE_MAX);
+	  strncpy(plan.mt->pattern, optarg, LINE_MAX);
 	  break;
 	case 0:
 	  if (opt_empty == 1)
-		plan.acq_flags |= OPT_EMPTY;
+		plan.flags |= OPT_EMPTY;
 	  if (opt_delete == 1)
-		plan.acq_flags |=  OPT_DEL;
+		plan.flags |=  OPT_DEL;
 	  break;
 	case 's':
-	  plan.acq_flags |= OPT_SORT;
+	  plan.flags |= OPT_SORT;
 	  break;
 	case 'v':
-	  plan.acq_flags |= OPT_VERSION;
+	  plan.flags |= OPT_VERSION;
 	  break;
 	case 'x':
-	  plan.acq_flags |= OPT_XDEV;
+	  plan.flags |= OPT_XDEV;
 	  break;
 	case 't':
 	  switch (optarg[0]) {
 	  case 'p':
-		plan.acq_args->type = NT_ISFIFO;
+		plan.args->type = NT_ISFIFO;
 		break;
 	  case 'c':
-		plan.acq_args->type = NT_ISCHR;
+		plan.args->type = NT_ISCHR;
 		break;
 	  case 'd':
-		plan.acq_args->type = NT_ISDIR;
+		plan.args->type = NT_ISDIR;
 		break;
 	  case 'b':
-		plan.acq_args->type = NT_ISBLK;
+		plan.args->type = NT_ISBLK;
 		break;
 	  case 'l':
-		plan.acq_args->type = NT_ISLNK;
+		plan.args->type = NT_ISLNK;
 		break;
 	  case 's':
-		plan.acq_args->type = NT_ISSOCK;
+		plan.args->type = NT_ISSOCK;
 		break;
 	  case 'f':
 	  case '\0':
-		plan.acq_args->type = NT_ISREG;
+		plan.args->type = NT_ISREG;
 		break;
 	  default:
 		ftype_err(optarg);
@@ -154,19 +153,19 @@ main(int argc, char *argv[])
 	  }
 	  break;
 	case 'E':
-	  plan.acq_mt->mflag |= REG_EXTENDED;
+	  plan.mt->mflag |= REG_EXTENDED;
 	  break;
 	case 'I':
-	  plan.acq_mt->mflag |= REG_ICASE;
+	  plan.mt->mflag |= REG_ICASE;
 	  break;
 	case 'L':
-	  plan.acq_flags |= OPT_STAT;
+	  plan.flags |= OPT_STAT;
 	  break;
 	case 'P':
-	  plan.acq_flags |= OPT_LSTAT;
+	  plan.flags |= OPT_LSTAT;
 	  break;
 	default:
-	  plan.acq_flags |= OPT_USAGE;
+	  plan.flags |= OPT_USAGE;
 	  break;
 	}
 
@@ -181,7 +180,7 @@ main(int argc, char *argv[])
 	exit (1);
   }
   
-  if (add_plan(&plan, &exec_list) < 0) {
+  if (add_plan(&plan) < 0) {
 #ifdef _DEBUG_
 	warnx("add_plan() failed!\n");
 #endif
@@ -189,7 +188,7 @@ main(int argc, char *argv[])
 	exit (1);
   }
 
-  ret = execute_plan(&plan, &exec_list);
+  ret = execute_plan(&plan);
 
 #ifdef _DEBUG_
   warnx("ret=%d\n", ret);
@@ -212,21 +211,24 @@ ftype_err(const char *s)
 static void
 cleanup(int sig)
 {
-  free_plan(&exec_list);
-  
-  if (plan.acq_paths) {
-	dl_free(&(plan.acq_paths));
-	plan.acq_paths = NULL;
+  if (plan.plans) {
+	free_plan(plan.plans);
+	plan.plans = NULL;
   }
   
-  if (plan.acq_mt != NULL) {
-	free(plan.acq_mt);
-	plan.acq_mt = NULL;
+  if (plan.paths) {
+	dl_free(&(plan.paths));
+	plan.paths = NULL;
   }
   
-  if (plan.acq_args != NULL) {
-	free(plan.acq_args);
-	plan.acq_args = NULL;
+  if (plan.mt != NULL) {
+	free(plan.mt);
+	plan.mt = NULL;
+  }
+  
+  if (plan.args != NULL) {
+	free(plan.args);
+	plan.args = NULL;
   }
 
   if (plan.nstat != NULL) {

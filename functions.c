@@ -65,13 +65,13 @@ s_regex(const char *name, plan_t *p)
 	return (-1);
   if (p == NULL)
 	return (-1);
-  if (p->acq_mt == NULL)
+  if (p->mt == NULL)
 	return (-1);
-  if (comp_regex(p->acq_mt) < 0)
+  if (comp_regex(p->mt) < 0)
 	return (-1);
 
-  fmt = &(p->acq_mt->fmt);
-  pattern = p->acq_mt->pattern;
+  fmt = &(p->mt->fmt);
+  pattern = p->mt->pattern;
   plen = strlen(name);
   
   bzero(msg, LINE_MAX);
@@ -112,18 +112,18 @@ s_name(const char *name, plan_t *p)
 	return (-1);
   if (p == NULL)
 	return (-1);
-  if (p->acq_mt == NULL)
+  if (p->mt == NULL)
 	return (-1);
   
   mflag = 0;
-  pattern = p->acq_mt->pattern;
+  pattern = p->mt->pattern;
   plen = strlen(pattern);
   matched = FNM_NOMATCH;
   
   if (plen == 0)
 	pattern = "*";
   
-  if (p->acq_mt->mflag & REG_ICASE) {
+  if (p->mt->mflag & REG_ICASE) {
 	mflag = FNM_CASEFOLD | FNM_PERIOD | FNM_PATHNAME | FNM_NOESCAPE;
   }
 
@@ -149,7 +149,7 @@ gettype(const char *name, plan_t *p)
   if (p->nstat == NULL)
 	return (NT_ERROR);
 
-  if (p->acq_flags & OPT_STAT)
+  if (p->flags & OPT_STAT)
 	ret = stat(name, &stbuf);
   else
 	ret = lstat(name, &stbuf);
@@ -196,21 +196,21 @@ s_gid(const char *name __unused, plan_t *p)
 
   if (p == NULL)
 	return (-1);
-  if (p->acq_args == NULL)
+  if (p->args == NULL)
 	return (-1);
   if (p->nstat == NULL)
 	return (-1);
   if (p->nstat->uid < 0)
 	return (-1);
   
-  id = strtol(p->acq_args->sgid, &s, 0);
+  id = strtol(p->args->sgid, &s, 0);
   if (s[0] == '\0')
 	grp = getgrgid(id);
   else
 	grp = getgrnam(s);
   
   if (grp == NULL) {
-	warnx("--group: %s: no such group", p->acq_args->sgid);
+	warnx("--group: %s: no such group", p->args->sgid);
 	return (-1);
   }
 
@@ -229,19 +229,19 @@ s_uid(const char *name __unused, plan_t *p)
 
   if (p == NULL)
 	return (-1);
-  if (p->acq_args == NULL)
+  if (p->args == NULL)
 	return (-1);
   if (p->nstat == NULL)
 	return (-1);
   
-  id = strtol(p->acq_args->suid, &s, 0);
+  id = strtol(p->args->suid, &s, 0);
   if (s[0] == '\0')
 	pwd = getpwuid(id);
   else
 	pwd = getpwnam(s);
   
   if (pwd == NULL) {
-	warnx("--user: %s: no such user", p->acq_args->suid);
+	warnx("--user: %s: no such user", p->args->suid);
 	return (-1);
   }
 
@@ -268,14 +268,14 @@ int s_xdev(const char *name __unused, plan_t *p)
 {
   if (p == NULL)
 	return (-1);
-  if (p->acq_args == NULL)
+  if (p->args == NULL)
 	return (-1);
   if (p->nstat == NULL)
 	return (-1);
 
-  if (p->acq_args->odev == 0)
-	p->acq_args->odev = p->nstat->dev;
-  if (p->nstat->dev != p->acq_args->odev)
+  if (p->args->odev == 0)
+	p->args->odev = p->nstat->dev;
+  if (p->nstat->dev != p->args->odev)
 	return (-1);
 
   return (0);
@@ -285,12 +285,12 @@ int s_sort(const char *name __unused, plan_t *p) {
 
   if (p == NULL)
 	return (-1);
-  if (p->acq_paths == NULL)
+  if (p->paths == NULL)
 	return (-1);
-  if (dl_empty(&(p->acq_paths)))
+  if (dl_empty(&(p->paths)))
 	return (-1);
 
-  dl_sort(&(p->acq_paths));
+  dl_sort(&(p->paths));
   return (0);
 }
 
@@ -308,18 +308,19 @@ int s_delete(const char *name, plan_t *p) {
 
 int s_path(const char *name __unused, plan_t *p)
 {
+  DLIST *paths = p->paths;
+  
   if (p == NULL ||
-	  p->acq_paths == NULL ||
-	  dl_empty(&(p->acq_paths)))
+	  p->paths == NULL ||
+	  dl_empty(&(paths)))
 	return (-1);
-
-  p->acq_paths->cur = p->acq_paths->head;
-  while (p->acq_paths->cur != NULL) {
-	walk_through(p->acq_paths->cur->ent, p);
-	if (p->acq_paths->cur != NULL) {
-	  p->acq_paths->cur = p->acq_paths->cur->next;
+  
+  paths->cur = paths->head;
+  while (paths->cur != NULL) {
+	walk_through(paths->cur->ent, p);
+	if (paths->cur != NULL) {
+	  paths->cur = paths->cur->next;
 	}
-	dl_clear(&(p->acq_paths));
   }
 
   return (0);
@@ -331,20 +332,32 @@ walk_through(const char *name, plan_t *p)
   char tmp_buf[MAXPATHLEN];
   static struct dirent *dir;
   DIR *dirp;
+  DLIST *dlist;
+  plist_t *pl;
 
   if (name == NULL ||
 	  p == NULL ||
-	  p->nstat == NULL ||
-	  dl_empty(&(p->acq_paths)))
+	  p->plans == NULL ||
+	  p->nstat == NULL)
 	return;
-    
+
+  if ((dlist = dl_init()) == NULL)
+	return;
+  
   if (gettype(name, p) < 0) {
 	warn("%s", name);
 	return;
   }
 
+  pl = p->plans;
+  
   if (p->nstat->type != NT_ISDIR) {
-	dl_append(name, &(p->acq_paths));
+	pl->cur = pl->start;
+	while (pl->cur != NULL) {
+	  pl->retval |= pl->cur->s_func(name, p);
+	  if (pl->cur)
+		pl->cur = pl->cur->next;
+	}
 	return;
   }
   
@@ -367,11 +380,19 @@ walk_through(const char *name, plan_t *p)
 	strncat(tmp_buf, dir->d_name, MAXPATHLEN);
 
 	out(tmp_buf);
-	dl_append(tmp_buf, &(p->acq_paths));
+	dl_append(tmp_buf, &(dlist));
   }
   
   closedir(dirp);
 
+  dlist->cur = dlist->head;
+  while (dlist->cur != NULL) {
+	walk_through(dlist->cur->ent, p);
+	if (dlist->cur)
+	  dlist->cur = dlist->cur->next;
+  }
+
+  dl_free(&dlist);
   return;
 }
 

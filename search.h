@@ -99,19 +99,6 @@ typedef struct _args_t {
   unsigned int empty;
 } args_t;
 
-typedef struct _plan_t {
-  unsigned int acq_flags;
-  match_t *acq_mt;
-  args_t *acq_args;
-  DLIST *acq_paths;
-  struct _nstat_t *nstat;
-} plan_t;
-
-typedef struct _plan {
-  int (*s_func) (const char *, struct _plan_t *);
-  struct _plan *next;
-} PLAN;
-
 typedef struct _plist_t {
   int retval;
   struct _plan *start;
@@ -119,6 +106,19 @@ typedef struct _plist_t {
   unsigned int size;
 } plist_t;
 
+typedef struct _plan_t {
+  unsigned int flags;
+  struct _match_t *mt;
+  struct _args_t *args;
+  struct _plist_t *plans;
+  struct _nstat_t *nstat;
+  DLIST *paths;
+} plan_t;
+
+typedef struct _plan {
+  int (*s_func) (const char *, struct _plan_t *);
+  struct _plan *next;
+} PLAN;
 
 typedef struct flags_t {
   unsigned int opt;
