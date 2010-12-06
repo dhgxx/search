@@ -60,8 +60,9 @@
 #define OPT_NAME    0x000800
 #define OPT_REGEX   0x002000
 #define OPT_PATH    0x004000
-#define OPT_VERSION 0x008000
-#define OPT_USAGE   0x020000
+#define OPT_TYPE    0x008000
+#define OPT_VERSION 0x020000
+#define OPT_USAGE   0x040000
 
 typedef enum _node {
   NT_UNKNOWN = DT_UNKNOWN,

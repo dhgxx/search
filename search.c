@@ -35,7 +35,7 @@ extern int init_plan(plan_t *);
 extern int find_plan(int, char **, plan_t *);
 extern int execute_plan(plan_t *);
 extern int add_plan(plan_t *);
-extern void free_plan(plist_t *);
+extern void free_plan(plist_t **);
 
 static int opt_empty;
 static int opt_delete;
@@ -98,12 +98,20 @@ main(int argc, char *argv[])
 	  dl_append(optarg, &(plan.paths));
 	  break;
 	case 'n':
-	  plan.flags |= OPT_NAME;
+	  if (!(plan.flags & OPT_NAME)) {
+		if (plan.flags & OPT_REGEX)
+		  plan.flags &= ~OPT_REGEX;
+		plan.flags |= OPT_NAME;
+	  }
 	  bzero(plan.mt->pattern, LINE_MAX);
 	  strncpy(plan.mt->pattern, optarg, LINE_MAX);
 	  break;
 	case 'r':
-	  plan.flags |= OPT_REGEX;
+	  if (!(plan.flags & OPT_REGEX)) {
+		if (plan.flags & OPT_NAME)
+		  plan.flags &= ~OPT_NAME;
+		plan.flags |= OPT_REGEX;
+	  }
 	  bzero(plan.mt->pattern, LINE_MAX);
 	  strncpy(plan.mt->pattern, optarg, LINE_MAX);
 	  break;
@@ -123,6 +131,7 @@ main(int argc, char *argv[])
 	  plan.flags |= OPT_XDEV;
 	  break;
 	case 't':
+	  plan.flags |= OPT_TYPE;
 	  switch (optarg[0]) {
 	  case 'p':
 		plan.args->type = NT_ISFIFO;
@@ -212,7 +221,7 @@ static void
 cleanup(int sig)
 {
   if (plan.plans) {
-	free_plan(plan.plans);
+	free_plan(&(plan.plans));
 	plan.plans = NULL;
   }
   

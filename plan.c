@@ -11,6 +11,7 @@ extern int s_stat(const char *, plan_t *);
 extern int s_lstat(const char *, plan_t *);
 extern int s_delete(const char *, plan_t *);
 extern int s_path(const char *, plan_t *);
+extern int s_type(const char *, plan_t *);
 extern int s_version(const char *, plan_t *);
 extern int s_usage(const char *, plan_t *);
 
@@ -18,8 +19,8 @@ static const FLAGS flags[] = {
   /* order == start == */
   { OPT_VERSION, &s_version },
   { OPT_USAGE,   &s_usage   },
-  { OPT_PATH,    &s_path    },
   { OPT_SORT,    &s_sort    },
+  { OPT_PATH,    &s_path    },
   /* order == end == */
   { OPT_EMPTY,   &s_empty   },
   { OPT_GRP,     &s_gid     },
@@ -28,6 +29,7 @@ static const FLAGS flags[] = {
   { OPT_LSTAT,   &s_lstat   },
   { OPT_NAME,    &s_name    },
   { OPT_REGEX,   &s_regex   },
+  { OPT_TYPE,    &s_type    },
   { OPT_XDEV,    &s_xdev    },
   { OPT_DEL,     &s_delete  },
   { OPT_NONE,    NULL       },
@@ -40,7 +42,7 @@ int init_plan(plan_t *);
 int find_plan(int, char **, plan_t *);
 int execute_plan(plan_t *);
 int add_plan(plan_t *);
-void free_plan(plist_t *);
+void free_plan(plist_t **);
 
 int
 init_plan(plan_t *p)
@@ -59,7 +61,7 @@ init_plan(plan_t *p)
   p->mt->mflag = REG_BASIC;
   p->args->odev = 0;
   p->args->empty = 0;
-  p->flags = OPT_NONE;
+  p->flags = OPT_NONE | OPT_NAME;
   
   p->plans->cur = p->plans->start = NULL;
   p->plans->size = 0;
@@ -116,10 +118,11 @@ execute_plan(plan_t *p)
 }
 
 void
-free_plan(plist_t *pl)
+free_plan(plist_t **plist)
 {
   int i;
   PLAN *tmp;
+  plist_t *pl = *plist;
   
   if (pl == NULL)
 	return;
@@ -145,6 +148,11 @@ free_plan(plist_t *pl)
 	free(tmp);
 	tmp = NULL;
 	i++;
+  }
+
+  if (pl != NULL) {
+	free(pl);
+	pl = NULL;
   }
 }
 
@@ -204,9 +212,8 @@ plan_execute(plan_t *p)
   if (p == NULL)
 	return (-1);
 
-  if ((p->plans->cur = p->plans->start) != NULL) {
-	return (p->plans->retval = p->plans->start->s_func(p->paths->head->ent, p));
-  }
+  if ((p->plans->cur = p->plans->start) == NULL)
+	return (-1);
   
-  return (-1);
+  return (p->plans->retval = p->plans->start->s_func(p->paths->head->ent, p));
 }

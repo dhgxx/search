@@ -57,7 +57,7 @@ int
 s_regex(const char *name, plan_t *p)
 {
   int ret, plen, matched;
-  char *pattern, msg[LINE_MAX];
+  char *pattern, *d_name, msg[LINE_MAX];
   static regex_t *fmt;
   regmatch_t pmatch;
 
@@ -70,16 +70,17 @@ s_regex(const char *name, plan_t *p)
   if (comp_regex(p->mt) < 0)
 	return (-1);
 
+  d_name = basename(name);
   fmt = &(p->mt->fmt);
   pattern = p->mt->pattern;
-  plen = strlen(name);
+  plen = strlen(d_name);
   
   bzero(msg, LINE_MAX);
   pmatch.rm_so = 0;
   pmatch.rm_eo = plen;
   matched = 0;
 
-  ret = regexec(fmt, name, 1, &pmatch, REG_STARTEND);
+  ret = regexec(fmt, d_name, 1, &pmatch, REG_STARTEND);
 
   if (ret != 0 && ret != REG_NOMATCH) {
 	if (regerror(ret, fmt, msg, LINE_MAX) > 0) {
@@ -92,12 +93,13 @@ s_regex(const char *name, plan_t *p)
 	return (-1);
   }
 
-#ifdef _DEBUG_
-  warnx("exec_regex: pattern=%s, name=%s",
-		pattern, name);
-#endif
-  
   matched = ((ret == 0) && (pmatch.rm_so == 0) && (pmatch.rm_eo == plen));
+  
+#ifdef _DEBUG_
+  warnx("exec_regex: pattern=%s, name=%s :%s MATCHED!",
+		pattern, d_name, ((matched == 0) ? "" : "NOT"));
+#endif
+
   return ((matched == 1) ? (0) : (-1));
 }
 
@@ -106,7 +108,7 @@ s_name(const char *name, plan_t *p)
 {
   int matched;
   unsigned int plen, mflag;
-  char *pattern;
+  char *pattern, *d_name;
 
   if (name == NULL)
 	return (-1);
@@ -114,7 +116,8 @@ s_name(const char *name, plan_t *p)
 	return (-1);
   if (p->mt == NULL)
 	return (-1);
-  
+
+  d_name = basename(name);
   mflag = 0;
   pattern = p->mt->pattern;
   plen = strlen(pattern);
@@ -126,17 +129,18 @@ s_name(const char *name, plan_t *p)
   if (p->mt->mflag & REG_ICASE) {
 	mflag = FNM_CASEFOLD | FNM_PERIOD | FNM_PATHNAME | FNM_NOESCAPE;
   }
-
-#ifdef _DEBUG_
-  warnx("exec_name: pattern=%s, name=%s",
-		pattern, name);
-#endif
   
-  matched = fnmatch(pattern, name, mflag);
+  matched = fnmatch(pattern, d_name, mflag);
+  
+#ifdef _DEBUG_
+  warnx("exec_name: pattern=%s, name=%s :%s MATCHED!",
+		pattern, d_name, ((matched == 0) ? "" : "NOT"));
+#endif
+
   return ((matched == 0) ? (0) : (-1));
 }
 
-int
+static int
 gettype(const char *name, plan_t *p)
 {
   int ret;
@@ -155,7 +159,9 @@ gettype(const char *name, plan_t *p)
 	ret = lstat(name, &stbuf);
 
   if (ret < 0) {
+#ifdef _DEBUG_
 	warn("gettype()");
+#endif
 	return (-1);
   }
 
@@ -251,7 +257,8 @@ s_uid(const char *name __unused, plan_t *p)
   return (-1);
 }
 
-int s_empty(const char *name __unused, plan_t *p)
+int
+s_empty(const char *name __unused, plan_t *p)
 {
   if (p == NULL)  
 	return (-1);
@@ -264,7 +271,8 @@ int s_empty(const char *name __unused, plan_t *p)
   return (-1);
 }
 
-int s_xdev(const char *name __unused, plan_t *p)
+int
+s_xdev(const char *name __unused, plan_t *p)
 {
   if (p == NULL)
 	return (-1);
@@ -281,37 +289,45 @@ int s_xdev(const char *name __unused, plan_t *p)
   return (0);
 }
 
-int s_sort(const char *name __unused, plan_t *p) {
+int
+s_sort(const char *name __unused, plan_t *p) {
 
   if (p == NULL)
 	return (-1);
   if (p->paths == NULL)
 	return (-1);
-  if (dl_empty(&(p->paths)))
-	return (-1);
-
+  
   dl_sort(&(p->paths));
   return (0);
 }
 
-int s_stat(const char *name, plan_t *p) {
+int
+s_stat(const char *name, plan_t *p) {
   return (-1);
 }
 
-int s_lstat(const char *name, plan_t *p) {
+int
+s_lstat(const char *name, plan_t *p) {
   return (-1);
 }
 
-int s_delete(const char *name, plan_t *p) {
+int
+s_delete(const char *name, plan_t *p) {
   return (-1);
 }
 
-int s_path(const char *name __unused, plan_t *p)
+int
+s_path(const char *name , plan_t *p)
 {
-  DLIST *paths = p->paths;
+  DLIST *paths;
   
-  if (p == NULL ||
-	  p->paths == NULL ||
+  if (p == NULL) {
+	return (-1);
+  }
+
+  paths = p->paths;
+  
+  if (paths == NULL ||
 	  dl_empty(&(paths)))
 	return (-1);
   
@@ -326,9 +342,24 @@ int s_path(const char *name __unused, plan_t *p)
   return (0);
 }
 
+int
+s_type(const char *s __unused, plan_t *p)
+{
+  if (p == NULL ||
+	  p->args == NULL ||
+	  p->nstat == NULL)
+	return (-1);
+#ifdef _DEBUG_
+  warnx("want: %d, actual: %d\n",
+		p->args->type, p->nstat->type);
+#endif
+  return ((p->args->type == p->nstat->type) ? (0) : (-1));
+}
+
 static void
 walk_through(const char *name, plan_t *p)
 {
+  int retval;
   char tmp_buf[MAXPATHLEN];
   static struct dirent *dir;
   DIR *dirp;
@@ -350,19 +381,39 @@ walk_through(const char *name, plan_t *p)
   }
 
   pl = p->plans;
-  
-  if (p->nstat->type != NT_ISDIR) {
-	pl->cur = pl->start;
-	while (pl->cur != NULL) {
-	  pl->retval |= pl->cur->s_func(name, p);
-	  if (pl->cur)
-		pl->cur = pl->cur->next;
+  pl->retval = 0;
+  pl->cur = pl->start;
+  while (pl->cur != NULL) {
+	if (pl->cur->s_func == &s_path) {
+	  pl->cur = pl->cur->next;
+	  break;
 	}
+	pl->cur = pl->cur->next;
+  }
+  
+  while (pl->cur != NULL) {
+	pl->retval |= pl->cur->s_func(name, p);
+#ifdef _DEBUG_
+	fprintf(stderr, "pl->retval=%d\n", retval);
+#endif
+	if (pl->cur)
+	  pl->cur = pl->cur->next;
+  }
+  
+  if (pl->retval == 0) {
+	out(name);
+  }
+
+  if (p->nstat->type != NT_ISDIR) {
+	dl_free(&dlist);
+	dlist = NULL;
 	return;
   }
   
   if (NULL == (dirp = opendir(name))) {
 	warn("%s", name);
+	dl_free(&dlist);
+	dlist = NULL;
 	return;
   }
   
@@ -379,7 +430,6 @@ walk_through(const char *name, plan_t *p)
 	  strncat(tmp_buf, "/", MAXPATHLEN);
 	strncat(tmp_buf, dir->d_name, MAXPATHLEN);
 
-	out(tmp_buf);
 	dl_append(tmp_buf, &(dlist));
   }
   
@@ -393,6 +443,7 @@ walk_through(const char *name, plan_t *p)
   }
 
   dl_free(&dlist);
+  dlist = NULL;
   return;
 }
 
