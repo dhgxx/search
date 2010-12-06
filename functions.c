@@ -272,7 +272,7 @@ s_empty(const char *name __unused, plan_t *p)
 }
 
 int
-s_xdev(const char *name __unused, plan_t *p)
+s_xdev(const char *name, plan_t *p)
 {
   if (p == NULL)
 	return (-1);
@@ -283,8 +283,12 @@ s_xdev(const char *name __unused, plan_t *p)
 
   if (p->args->odev == 0)
 	p->args->odev = p->nstat->dev;
-  if (p->nstat->dev != p->args->odev)
+  if (p->nstat->dev != p->args->odev) {
+	if (p->nstat->type == NT_ISDIR) {
+	  out(name);
+	}
 	return (-1);
+  }
 
   return (0);
 }
@@ -296,7 +300,7 @@ s_sort(const char *name __unused, plan_t *p) {
 	return (-1);
   if (p->paths == NULL)
 	return (-1);
-  
+
   dl_sort(&(p->paths));
   return (0);
 }
@@ -396,8 +400,17 @@ walk_through(const char *name, plan_t *p)
 #ifdef _DEBUG_
 	fprintf(stderr, "pl->retval=%d\n", retval);
 #endif
-	if (pl->cur)
+
+	if (pl->cur->s_func == &s_xdev) {
+	  if (pl->retval != 0) {
+		dl_free(&dlist);
+		return;
+	  }
+	}
+	
+	if (pl->cur) {
 	  pl->cur = pl->cur->next;
+	}
   }
   
   if (pl->retval == 0) {
@@ -434,7 +447,7 @@ walk_through(const char *name, plan_t *p)
   }
   
   closedir(dirp);
-
+  
   dlist->cur = dlist->head;
   while (dlist->cur != NULL) {
 	walk_through(dlist->cur->ent, p);

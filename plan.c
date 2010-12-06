@@ -19,8 +19,8 @@ static const FLAGS flags[] = {
   /* order == start == */
   { OPT_VERSION, &s_version },
   { OPT_USAGE,   &s_usage   },
-  { OPT_SORT,    &s_sort    },
   { OPT_PATH,    &s_path    },
+  { OPT_SORT,    &s_sort    },
   /* order == end == */
   { OPT_EMPTY,   &s_empty   },
   { OPT_GRP,     &s_gid     },
@@ -214,6 +214,12 @@ plan_execute(plan_t *p)
 
   if ((p->plans->cur = p->plans->start) == NULL)
 	return (-1);
-  
-  return (p->plans->retval = p->plans->start->s_func(p->paths->head->ent, p));
+
+  while (p->plans->cur != NULL) {
+	p->plans->retval = p->plans->cur->s_func(NULL, p);
+	if (p->plans->cur)
+	  p->plans->cur = p->plans->cur->next;
+  }
+
+  return (p->plans->retval);
 }
