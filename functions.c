@@ -145,6 +145,8 @@ gettype(const char *name, plan_t *p)
 {
   int ret;
   static struct stat stbuf;
+  DIR *dirp;
+  struct dirent *dir;
 
   if (name == NULL)
 	return (NT_ERROR);
@@ -165,6 +167,7 @@ gettype(const char *name, plan_t *p)
 	return (-1);
   }
 
+  p->nstat->empty = 0;
   p->nstat->gid = stbuf.st_gid;
   p->nstat->uid = stbuf.st_uid;
   p->nstat->dev = stbuf.st_dev;
@@ -183,15 +186,26 @@ gettype(const char *name, plan_t *p)
 	p->nstat->type = NT_ISREG;
   if (S_ISSOCK(stbuf.st_mode))
 	p->nstat->type = NT_ISSOCK;
-  
-  if (stbuf.st_size == 0)
+
+  if (p->nstat->type != NT_ISDIR) {
+	if (stbuf.st_size == 0)
+	  p->nstat->empty = 1;
+  } else {
 	p->nstat->empty = 1;
-  else
-	p->nstat->empty = 0;
+	if ((dirp = opendir(name)) != NULL) {
+	  for (dir = readdir(dirp); dir; dir = readdir(dirp))
+		if (dir->d_name[0] != '.' ||
+			(dir->d_name[1] != '\0' &&
+			 (dir->d_name[1] != '.' || dir->d_name[2] != '\0'))) {
+		  p->nstat->empty = 0;
+		  break;
+		}
+	  closedir(dirp);
+	}
+  }
   
   return (0);
 }
-
 
 int
 s_gid(const char *name __unused, plan_t *p)
