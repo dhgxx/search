@@ -338,8 +338,26 @@ s_sort(const char *name __unused, plan_t *p) {
 }
 
 int
-s_delete(const char *name, plan_t *p) {
-  return (-1);
+s_delete(const char *name, plan_t *p)
+{
+  if (name == NULL)
+	return (-1);
+  if (p == NULL)
+	return (-1);
+  if (p->plans == NULL)
+	return (-1);
+
+  if (p->plans->retval != 0) {
+	return (-1);
+  }
+
+  if ((0 == strncmp(name, ".", strlen(name) + 1)) ||
+      (0 == strncmp(name, "..", strlen(name) + 1))) {
+	return (-1);
+  }
+
+  warnx("%s: to be deleted!", name);
+  return (0);
 }
 
 int
@@ -417,7 +435,7 @@ walk_through(const char *name, plan_t *p)
   }
   
   while (pl->cur != NULL) {
-	retval |= pl->cur->s_func(name, p);
+	pl->retval = (retval |= pl->cur->s_func(name, p));
 #ifdef _DEBUG_
 	fprintf(stderr, "retval=%d\n", retval);
 #endif
