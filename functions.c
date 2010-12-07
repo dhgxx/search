@@ -32,22 +32,21 @@
 
 static unsigned int delete = 0;
 
-
-static int gettype(const char *, plan_t *);
 static void out(const char *);
 static void dislink(const char *, NODE);
 static int comp_regex(match_t *);
+static int nodestat(const char *, plan_t *, int (*) (const char *, struct stat *));
 static void walk_through(const char *, plan_t *);
 
 int s_regex(const char *, plan_t *);
 int s_name(const char *, plan_t *);
+int s_stat(const char *, plan_t *);
+int s_lstat(const char *, plan_t *);
 int s_gid(const char *, plan_t *);
 int s_uid(const char *, plan_t *);
 int s_empty(const char *, plan_t *);
 int s_xdev(const char *, plan_t *);
 int s_sort(const char *, plan_t *);
-int s_stat(const char *, plan_t *);
-int s_lstat(const char *, plan_t *);
 int s_delete(const char *, plan_t *);
 int s_path(const char *, plan_t *);
 int s_version(const char *, plan_t *);
@@ -141,7 +140,8 @@ s_name(const char *name, plan_t *p)
 }
 
 static int
-gettype(const char *name, plan_t *p)
+nodestat(const char *name, plan_t *p,
+	int (*stat_f) (const char *s, struct stat *buf))
 {
   int ret;
   static struct stat stbuf;
@@ -152,22 +152,19 @@ gettype(const char *name, plan_t *p)
 	return (NT_ERROR);
   if (p == NULL)
 	return (NT_ERROR);
+  if (stat_f == NULL)
+	return (NT_ERROR);
   if (p->nstat == NULL)
 	return (NT_ERROR);
 
-  if (p->flags & OPT_STAT)
-	ret = stat(name, &stbuf);
-  else
-	ret = lstat(name, &stbuf);
-
-  if (ret < 0) {
+  if ((ret = stat_f(name, &stbuf)) < 0) {
 #ifdef _DEBUG_
 	warn("gettype()");
 #endif
 	return (-1);
   }
 
-  p->nstat->empty = 0;
+  p->nstat->empty = 1;
   p->nstat->gid = stbuf.st_gid;
   p->nstat->uid = stbuf.st_uid;
   p->nstat->dev = stbuf.st_dev;
@@ -188,10 +185,9 @@ gettype(const char *name, plan_t *p)
 	p->nstat->type = NT_ISSOCK;
 
   if (p->nstat->type != NT_ISDIR) {
-	if (stbuf.st_size == 0)
-	  p->nstat->empty = 1;
+	if (stbuf.st_size != 0)
+	  p->nstat->empty = 0;
   } else {
-	p->nstat->empty = 1;
 	if ((dirp = opendir(name)) != NULL) {
 	  for (dir = readdir(dirp); dir; dir = readdir(dirp))
 		if (dir->d_name[0] != '.' ||
@@ -205,6 +201,28 @@ gettype(const char *name, plan_t *p)
   }
   
   return (0);
+}
+
+int
+s_stat(const char *name, plan_t *p)
+{
+  if (name == NULL)
+	return (-1);
+  if (p == NULL)
+	return (-1);
+
+  return (nodestat(name, p, &stat));
+}
+
+int
+s_lstat(const char *name, plan_t *p)
+{
+  if (name == NULL)
+	return (-1);
+  if (p == NULL)
+	return (-1);
+
+  return (nodestat(name, p, &lstat));
 }
 
 int
@@ -320,16 +338,6 @@ s_sort(const char *name __unused, plan_t *p) {
 }
 
 int
-s_stat(const char *name, plan_t *p) {
-  return (-1);
-}
-
-int
-s_lstat(const char *name, plan_t *p) {
-  return (-1);
-}
-
-int
 s_delete(const char *name, plan_t *p) {
   return (-1);
 }
@@ -381,7 +389,7 @@ walk_through(const char *name, plan_t *p)
   char tmp_buf[MAXPATHLEN];
   static struct dirent *dir;
   DIR *dirp;
-  DLIST *dlist;
+  DLIST *paths;
   plist_t *pl;
 
   if (name == NULL ||
@@ -390,13 +398,8 @@ walk_through(const char *name, plan_t *p)
 	  p->nstat == NULL)
 	return;
 
-  if ((dlist = dl_init()) == NULL)
+  if ((paths = dl_init()) == NULL)
 	return;
-  
-  if (gettype(name, p) < 0) {
-	warn("%s", name);
-	return;
-  }
 
   pl = p->plans;
   pl->retval = 0;
@@ -417,7 +420,8 @@ walk_through(const char *name, plan_t *p)
 
 	if (pl->cur->s_func == &s_xdev) {
 	  if (pl->retval != 0) {
-		dl_free(&dlist);
+		dl_free(&(paths));
+		paths = NULL;
 		return;
 	  }
 	}
@@ -432,15 +436,15 @@ walk_through(const char *name, plan_t *p)
   }
 
   if (p->nstat->type != NT_ISDIR) {
-	dl_free(&dlist);
-	dlist = NULL;
+	dl_free(&(paths));
+	paths = NULL;
 	return;
   }
   
   if (NULL == (dirp = opendir(name))) {
 	warn("%s", name);
-	dl_free(&dlist);
-	dlist = NULL;
+	dl_free(&(paths));
+	paths = NULL;
 	return;
   }
   
@@ -457,20 +461,20 @@ walk_through(const char *name, plan_t *p)
 	  strncat(tmp_buf, "/", MAXPATHLEN);
 	strncat(tmp_buf, dir->d_name, MAXPATHLEN);
 
-	dl_append(tmp_buf, &(dlist));
+	dl_append(tmp_buf, &(paths));
   }
   
   closedir(dirp);
   
-  dlist->cur = dlist->head;
-  while (dlist->cur != NULL) {
-	walk_through(dlist->cur->ent, p);
-	if (dlist->cur)
-	  dlist->cur = dlist->cur->next;
+  paths->cur = paths->head;
+  while (paths->cur != NULL) {
+	walk_through(paths->cur->ent, p);
+	if (paths->cur)
+	  paths->cur = paths->cur->next;
   }
 
-  dl_free(&dlist);
-  dlist = NULL;
+  dl_free(&paths);
+  paths = NULL;
   return;
 }
 

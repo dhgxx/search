@@ -168,10 +168,16 @@ main(int argc, char *argv[])
 	  plan.mt->mflag |= REG_ICASE;
 	  break;
 	case 'L':
-	  plan.flags |= OPT_STAT;
+	  if (plan.flags & OPT_LSTAT) {
+		plan.flags &= ~OPT_LSTAT;
+		plan.flags |= OPT_STAT;
+	  }
 	  break;
 	case 'P':
-	  plan.flags |= OPT_LSTAT;
+	  if (plan.flags & OPT_STAT) {
+		plan.flags &= ~OPT_STAT;
+		plan.flags |= OPT_LSTAT;
+	  }
 	  break;
 	default:
 	  plan.flags |= OPT_USAGE;
@@ -229,7 +235,7 @@ cleanup(int sig)
 	dl_free(&(plan.paths));
 	plan.paths = NULL;
   }
-  
+
   if (plan.mt != NULL) {
 	free(plan.mt);
 	plan.mt = NULL;

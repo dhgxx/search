@@ -2,13 +2,13 @@
 
 extern int s_regex(const char *, plan_t *);
 extern int s_name(const char *, plan_t *);
+extern int s_stat(const char *, plan_t *);
+extern int s_lstat(const char *, plan_t *);
 extern int s_gid(const char *, plan_t *);
 extern int s_uid(const char *, plan_t *);
 extern int s_empty(const char *, plan_t *);
 extern int s_xdev(const char *, plan_t *);
 extern int s_sort(const char *, plan_t *);
-extern int s_stat(const char *, plan_t *);
-extern int s_lstat(const char *, plan_t *);
 extern int s_delete(const char *, plan_t *);
 extern int s_path(const char *, plan_t *);
 extern int s_type(const char *, plan_t *);
@@ -16,22 +16,24 @@ extern int s_version(const char *, plan_t *);
 extern int s_usage(const char *, plan_t *);
 
 static const FLAGS flags[] = {
-  /* order == start == */
+  /* ===== order start ===== */
   { OPT_VERSION, &s_version },
   { OPT_USAGE,   &s_usage   },
   { OPT_PATH,    &s_path    },
   { OPT_SORT,    &s_sort    },
-  /* order == end == */
+  { OPT_STAT,    &s_stat    },
+  { OPT_LSTAT,   &s_lstat   },
+  /* ===== order end ===== */
   { OPT_EMPTY,   &s_empty   },
   { OPT_GRP,     &s_gid     },
   { OPT_USR,     &s_uid     },
-  { OPT_STAT,    &s_stat    },
-  { OPT_LSTAT,   &s_lstat   },
   { OPT_NAME,    &s_name    },
   { OPT_REGEX,   &s_regex   },
   { OPT_TYPE,    &s_type    },
+  /* ===== order start ===== */
   { OPT_XDEV,    &s_xdev    },
   { OPT_DEL,     &s_delete  },
+  /* ===== order end ===== */
   { OPT_NONE,    NULL       },
 };
 
@@ -61,7 +63,7 @@ init_plan(plan_t *p)
   p->mt->mflag = REG_BASIC;
   p->args->odev = 0;
   p->args->empty = 0;
-  p->flags = OPT_NONE | OPT_NAME;
+  p->flags = OPT_NONE | OPT_NAME | OPT_STAT;
   
   p->plans->cur = p->plans->start = NULL;
   p->plans->size = 0;
