@@ -385,7 +385,7 @@ s_type(const char *s __unused, plan_t *p)
 static void
 walk_through(const char *name, plan_t *p)
 {
-  int retval;
+  int retval, need_sort;
   char tmp_buf[MAXPATHLEN];
   static struct dirent *dir;
   DIR *dirp;
@@ -401,10 +401,14 @@ walk_through(const char *name, plan_t *p)
   if ((paths = dl_init()) == NULL)
 	return;
 
+  retval = 0;
+  need_sort = 0;
   pl = p->plans;
-  pl->retval = 0;
   pl->cur = pl->start;
   while (pl->cur != NULL) {
+	if (pl->cur->s_func == &s_sort) {
+	  need_sort = 1;
+	}
 	if (pl->cur->s_func == &s_path) {
 	  pl->cur = pl->cur->next;
 	  break;
@@ -413,13 +417,13 @@ walk_through(const char *name, plan_t *p)
   }
   
   while (pl->cur != NULL) {
-	pl->retval |= pl->cur->s_func(name, p);
+	retval |= pl->cur->s_func(name, p);
 #ifdef _DEBUG_
-	fprintf(stderr, "pl->retval=%d\n", retval);
+	fprintf(stderr, "retval=%d\n", retval);
 #endif
 
 	if (pl->cur->s_func == &s_xdev) {
-	  if (pl->retval != 0) {
+	  if (retval != 0) {
 		dl_free(&(paths));
 		paths = NULL;
 		return;
@@ -431,7 +435,7 @@ walk_through(const char *name, plan_t *p)
 	}
   }
   
-  if (pl->retval == 0) {
+  if (retval == 0) {
 	out(name);
   }
 
@@ -465,7 +469,11 @@ walk_through(const char *name, plan_t *p)
   }
   
   closedir(dirp);
-  
+
+  if (need_sort) {
+	dl_sort(&paths);
+  }
+ 
   paths->cur = paths->head;
   while (paths->cur != NULL) {
 	walk_through(paths->cur->ent, p);

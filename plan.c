@@ -19,8 +19,8 @@ static const FLAGS flags[] = {
   /* ===== order start ===== */
   { OPT_VERSION, &s_version },
   { OPT_USAGE,   &s_usage   },
-  { OPT_PATH,    &s_path    },
   { OPT_SORT,    &s_sort    },
+  { OPT_PATH,    &s_path    },
   { OPT_STAT,    &s_stat    },
   { OPT_LSTAT,   &s_lstat   },
   /* ===== order end ===== */
