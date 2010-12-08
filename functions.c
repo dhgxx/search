@@ -30,8 +30,6 @@
 
 #include "search.h"
 
-static unsigned int delete = 0;
-
 static void out(const char *);
 static void dislink(const char *, NODE);
 static int comp_regex(match_t *);
@@ -159,7 +157,7 @@ nodestat(const char *name, plan_t *p,
 
   if ((ret = stat_f(name, &stbuf)) < 0) {
 #ifdef _DEBUG_
-	warn("gettype()");
+	warn("nodestat()");
 #endif
 	return (-1);
   }
@@ -188,6 +186,7 @@ nodestat(const char *name, plan_t *p,
 	if (stbuf.st_size != 0)
 	  p->nstat->empty = 0;
   } else {
+	/* code from from BSD find(1) */
 	if ((dirp = opendir(name)) != NULL) {
 	  for (dir = readdir(dirp); dir; dir = readdir(dirp))
 		if (dir->d_name[0] != '.' ||
@@ -198,6 +197,7 @@ nodestat(const char *name, plan_t *p,
 		}
 	  closedir(dirp);
 	}
+	/* code from FreeBSD find(1). */
   }
   
   return (0);
@@ -356,7 +356,7 @@ s_delete(const char *name, plan_t *p)
 	return (-1);
   }
 
-  warnx("%s: to be deleted!", name);
+  dislink(name, p->nstat->type);
   return (0);
 }
 

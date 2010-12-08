@@ -75,7 +75,7 @@ main(int argc, char *argv[])
 #ifdef _DEBUG_
 	warnx("init_plan() failed!\n");
 #endif
-	cleanup(1);
+	cleanup(0);
 	exit (1);
   }
 
@@ -157,7 +157,7 @@ main(int argc, char *argv[])
 		break;
 	  default:
 		ftype_err(optarg);
-		cleanup(1);
+		cleanup(0);
 		exit (1);
 	  }
 	  break;
@@ -191,7 +191,7 @@ main(int argc, char *argv[])
 #ifdef _DEBUG_
 	warnx("find_plan() failed!\n");
 #endif
-	cleanup(1);
+	cleanup(0);
 	exit (1);
   }
   
@@ -199,7 +199,7 @@ main(int argc, char *argv[])
 #ifdef _DEBUG_
 	warnx("add_plan() failed!\n");
 #endif
-	cleanup(1);
+	cleanup(0);
 	exit (1);
   }
 
@@ -209,7 +209,7 @@ main(int argc, char *argv[])
   warnx("ret=%d\n", ret);
 #endif
 
-  cleanup(1);
+  cleanup(0);
   return (ret);
 }
 
