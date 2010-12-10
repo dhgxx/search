@@ -248,14 +248,12 @@ s_gid(const char *name __unused, plan_t *p)
 	grp = getgrnam(s);
   
   if (grp == NULL) {
-	warnx("--group: %s: no such group", p->args->sgid);
+	errx(1, "--group: %s: no such group", p->args->sgid);
+  } else if (grp->gr_gid != p->nstat->gid) {
 	return (-1);
   }
-
-  if (grp->gr_gid == p->nstat->gid)
-	return (0);
   
-  return (-1);
+  return (0);
 }
 
 int
@@ -279,14 +277,12 @@ s_uid(const char *name __unused, plan_t *p)
 	pwd = getpwnam(s);
   
   if (pwd == NULL) {
-	warnx("--user: %s: no such user", p->args->suid);
+	errx(1, "--user: %s: no such user", p->args->suid);
+  } else if (pwd->pw_uid != p->nstat->uid) {
 	return (-1);
   }
-
-  if (pwd->pw_uid == p->nstat->uid)
-	return (0);
   
-  return (-1);
+  return (0);
 }
 
 int
