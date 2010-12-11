@@ -63,7 +63,7 @@ init_plan(plan_t *p)
   p->mt->mflag = REG_BASIC;
   p->args->odev = 0;
   p->args->empty = 0;
-  p->flags = OPT_NONE | OPT_NAME | OPT_STAT;
+  p->flags = OPT_NONE | OPT_NAME | OPT_LSTAT;
   
   p->plans->cur = p->plans->start = NULL;
   p->plans->size = 0;
