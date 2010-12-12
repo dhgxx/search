@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 2005-2010 Denise H. G. All rights reserved
+ * Copyright (c) 2005-2010 Denise H. G. <darcsis@gmail.com>
+ * All rights reserved
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -417,6 +418,7 @@ walk_through(const char *name, plan_t *p)
 
   retval = 0;
   need_sort = 0;
+  
   pl = p->plans;
   pl->cur = pl->start;
   while (pl->cur != NULL) {

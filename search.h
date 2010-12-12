@@ -1,8 +1,6 @@
-#ifndef _SEARCH_H_
-#define _SEARCH_H_
-
 /*
- * Copyright (c) 2005-2010 Denise H. G. All rights reserved
+ * Copyright (c) 2005-2010 Denise H. G. <darcsis@gmail.com>
+ * All rights reserved
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +24,9 @@
  * SUCH DAMAGE.
  *
  */
+
+#ifndef _SEARCH_H_
+#define _SEARCH_H_
 
 #include <sys/stat.h>
 #include <sys/types.h>
