@@ -54,7 +54,7 @@ DEBUG_FLAGS=		-ggdb
 .endif
 .else
 STRIP=			-s
-LDFLAGS=
+DEBUG_FLAGS=
 .endif
 
 .if ${INSTALL_USER} == "root"

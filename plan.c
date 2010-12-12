@@ -40,10 +40,10 @@ static const FLAGS flags[] = {
 static int plan_add(unsigned int *, plist_t *);
 static int plan_execute(plan_t *);
 
-int init_plan(plan_t *);
-int find_plan(int, char **, plan_t *);
-int execute_plan(plan_t *);
-int add_plan(plan_t *);
+int  init_plan(plan_t *);
+int  find_plan(int, char **, plan_t *);
+int  execute_plan(plan_t *);
+int  add_plan(plan_t *);
 void free_plan(plist_t **);
 
 int

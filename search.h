@@ -27,22 +27,23 @@
  *
  */
 
-#include <sys/param.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/param.h>
 
-#include <stdio.h>
 #include <dirent.h>
-#include <string.h>
-#include <stdlib.h>
 #include <err.h>
 #include <errno.h>
-#include <unistd.h>
+#include <fnmatch.h>
 #include <limits.h>
+#include <locale.h>
 #include <regex.h>
 #include <signal.h>
-#include <fnmatch.h>
-#include <locale.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
 #include <dlist.h>
 
 #define SEARCH_NAME "search"

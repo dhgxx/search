@@ -24,16 +24,16 @@
  *
  */
 
+#include <grp.h>
 #include <libgen.h>
 #include <pwd.h>
-#include <grp.h>
 
 #include "search.h"
 
 static void out(const char *);
 static void dislink(const char *, NODE);
-static int comp_regex(match_t *);
-static int nodestat(const char *, plan_t *, int (*) (const char *, struct stat *));
+static int  comp_regex(match_t *);
+static int  nodestat(const char *, plan_t *, int (*) (const char *, struct stat *));
 static void walk_through(const char *, plan_t *);
 
 int s_regex(const char *, plan_t *);
