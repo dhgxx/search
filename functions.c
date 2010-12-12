@@ -474,10 +474,10 @@ walk_through(const char *name, plan_t *p)
 	}
 
 	bzero(tmp_buf, MAXPATHLEN);
-	strncpy(tmp_buf, name, MAXPATHLEN);
+	strlcpy(tmp_buf, name, MAXPATHLEN);
 	if ('/' != tmp_buf[strlen(tmp_buf) - 1])
-	  strncat(tmp_buf, "/", MAXPATHLEN);
-	strncat(tmp_buf, dir->d_name, MAXPATHLEN);
+	  strlcat(tmp_buf, "/", MAXPATHLEN);
+	strlcat(tmp_buf, dir->d_name, MAXPATHLEN);
 
 	dl_append(tmp_buf, &(paths));
   }

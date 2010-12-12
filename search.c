@@ -85,13 +85,13 @@ main(int argc, char *argv[])
 	case 3:
 	  plan.flags |= OPT_GRP;
 	  bzero(plan.args->sgid, LINE_MAX);
-	  strncpy(plan.args->sgid, optarg, LINE_MAX);
+	  strlcpy(plan.args->sgid, optarg, LINE_MAX);
 	  break;
 	case 4:
 	case 5:
 	  plan.flags |=  OPT_USR;
 	  bzero(plan.args->suid, LINE_MAX);
-	  strncpy(plan.args->suid, optarg, LINE_MAX);
+	  strlcpy(plan.args->suid, optarg, LINE_MAX);
 	  break;
 	case 'f':
 	  plan.flags |= OPT_PATH;
@@ -104,7 +104,7 @@ main(int argc, char *argv[])
 		plan.flags |= OPT_NAME;
 	  }
 	  bzero(plan.mt->pattern, LINE_MAX);
-	  strncpy(plan.mt->pattern, optarg, LINE_MAX);
+	  strlcpy(plan.mt->pattern, optarg, LINE_MAX);
 	  break;
 	case 'r':
 	  if (!(plan.flags & OPT_REGEX)) {
@@ -113,7 +113,7 @@ main(int argc, char *argv[])
 		plan.flags |= OPT_REGEX;
 	  }
 	  bzero(plan.mt->pattern, LINE_MAX);
-	  strncpy(plan.mt->pattern, optarg, LINE_MAX);
+	  strlcpy(plan.mt->pattern, optarg, LINE_MAX);
 	  break;
 	case 0:
 	  if (opt_empty == 1)
