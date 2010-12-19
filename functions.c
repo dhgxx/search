@@ -312,7 +312,9 @@ s_regex(const char *name, plan_t *p)
   if (regexcomp(p->mt) < 0)
 	return (-1);
 
-  d_name = basename(name);
+  if ((d_name = basename(name)) == NULL)
+	return (-1);
+  
   fmt = &(p->mt->fmt);
   pattern = p->mt->pattern;
   plen = strlen(d_name);
@@ -359,7 +361,9 @@ s_name(const char *name, plan_t *p)
   if (p->mt == NULL)
 	return (-1);
 
-  d_name = basename(name);
+  if ((d_name = basename(name)) == NULL)
+	return (-1);
+  
   mflag = 0;
   pattern = p->mt->pattern;
   plen = strlen(pattern);
