@@ -96,7 +96,7 @@ main(int argc, char *argv[])
 	  break;
 	case 'f':
 	  plan.flags |= OPT_PATH;
-	  dl_append(optarg, &(plan.paths));
+	  dl_append(optarg, plan.paths);
 	  break;
 	case 'n':
 	  if (!(plan.flags & OPT_NAME)) {
@@ -233,7 +233,7 @@ cleanup(int sig)
   }
   
   if (plan.paths) {
-	dl_free(&(plan.paths));
+	dl_free(plan.paths);
 	plan.paths = NULL;
   }
 

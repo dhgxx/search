@@ -233,7 +233,7 @@ walk_through(const char *name, plan_t *p)
 
 	if (pl->cur->s_func == &s_xdev) {
 	  if (retval != 0) {
-		dl_free(&(paths));
+		dl_free(paths);
 		paths = NULL;
 		return;
 	  }
@@ -249,14 +249,14 @@ walk_through(const char *name, plan_t *p)
   }
 
   if (p->nstat->type != NT_ISDIR) {
-	dl_free(&(paths));
+	dl_free(paths);
 	paths = NULL;
 	return;
   }
   
   if (NULL == (dirp = opendir(name))) {
 	warn("%s", name);
-	dl_free(&(paths));
+	dl_free(paths);
 	paths = NULL;
 	return;
   }
@@ -274,13 +274,13 @@ walk_through(const char *name, plan_t *p)
 	  strlcat(tmp_buf, "/", MAXPATHLEN);
 	strlcat(tmp_buf, dir->d_name, MAXPATHLEN);
 
-	dl_append(tmp_buf, &(paths));
+	dl_append(tmp_buf, paths);
   }
   
   closedir(dirp);
 
   if (need_sort) {
-	dl_sort(&paths);
+	dl_sort(paths);
   }
  
   paths->cur = paths->head;
@@ -290,7 +290,7 @@ walk_through(const char *name, plan_t *p)
 	  paths->cur = paths->cur->next;
   }
 
-  dl_free(&paths);
+  dl_free(paths);
   paths = NULL;
   return;
 }
@@ -508,7 +508,7 @@ s_sort(const char *name __unused, plan_t *p) {
   if (p->paths == NULL)
 	return (-1);
 
-  dl_sort(&(p->paths));
+  dl_sort(p->paths);
   return (0);
 }
 
@@ -547,7 +547,7 @@ s_path(const char *name , plan_t *p)
   paths = p->paths;
   
   if (paths == NULL ||
-	  dl_empty(&(paths)))
+	  dl_empty(paths))
 	return (-1);
   
   paths->cur = paths->head;

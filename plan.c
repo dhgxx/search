@@ -107,7 +107,7 @@ find_plan(int argc, char **argv, plan_t *p)
 	return (-1);
   
   if (argc == 0) {
-	if (dl_empty(&(p->paths))) {
+	if (dl_empty(p->paths)) {
 	  p->flags |= OPT_USAGE;
 	}
 	return (0);
@@ -118,7 +118,7 @@ find_plan(int argc, char **argv, plan_t *p)
 #ifdef _DEBUG_
 	  warnx("added path %s\n", argv[i]);
 #endif
-	  ret = dl_append(argv[i], &(p->paths));
+	  ret = dl_append(argv[i], p->paths);
 	}
 	p->flags |= OPT_PATH;
   }
