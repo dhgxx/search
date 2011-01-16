@@ -228,7 +228,7 @@ walk_through(const char *name, plan_t *p)
   while (pl->cur != NULL) {
 	pl->retval = (retval |= pl->cur->s_func(name, p));
 #ifdef _DEBUG_
-	fprintf(stderr, "retval=%d\n", retval);
+	(void)fprintf(stderr, "retval=%d\n", retval);
 #endif
 
 	if (pl->cur->s_func == &s_xdev) {
