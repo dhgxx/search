@@ -143,9 +143,7 @@ nodestat(const char *name, plan_t *p,
 	return (NT_ERROR);
 
   if ((ret = stat_f(name, &stbuf)) < 0) {
-#ifdef _DEBUG_
-	warn("nodestat()");
-#endif
+	warn("%s", name);
 	return (-1);
   }
 
