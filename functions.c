@@ -369,7 +369,11 @@ s_name(const char *name, plan_t *p)
   
   if (plen == 0)
 	pattern = "*";
-  
+#ifdef _DEBUG_
+  else {
+	printf("pattern=%s, plen=%d\n", pattern, plen);
+	}
+#endif 
   if (p->mt->mflag & REG_ICASE) {
 	mflag = FNM_CASEFOLD | FNM_PERIOD | FNM_PATHNAME | FNM_NOESCAPE;
   }

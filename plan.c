@@ -87,6 +87,7 @@ init_plan(plan_t *p)
 	return (-1);
   }
 
+  bzero(p->mt->pattern, LINE_MAX);
   p->mt->mflag = REG_BASIC;
   p->args->odev = 0;
   p->args->empty = 0;
