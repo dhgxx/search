@@ -423,9 +423,10 @@ s_gid(const char *name __unused, plan_t *p)
 	return (-1);
   if (p->nstat == NULL)
 	return (-1);
+/*
   if (p->nstat->uid < 0)
 	return (-1);
-  
+*/ 
   id = strtol(p->args->sgid, &s, 0);
   if (s[0] == '\0')
 	grp = getgrgid(id);

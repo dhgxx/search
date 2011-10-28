@@ -23,7 +23,7 @@ HDRS=			search.h
 OBJS=			functions.o plan.o search.o
 
 .if ${OSNAME} == "FreeBSD"
-CC=				cc
+CC=				clang
 BINGRP=			wheel
 MFILE=			${MAN}.gz
 MANDIR=			${OPT_MANDIR}/man1
