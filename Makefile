@@ -23,13 +23,17 @@ HDRS=			search.h
 OBJS=			functions.o plan.o search.o
 
 .if ${OSNAME} == "FreeBSD"
+.if exists(/usr/bin/clang)
 CC=				clang
+.else
+CC=				cc
+.endif
 BINGRP=			wheel
 MFILE=			${MAN}.gz
 MANDIR=			${OPT_MANDIR}/man1
 MKWHATIS=		/usr/bin/makewhatis
 .elif ${OSNAME} == "OpenBSD"
-CC=			cc
+CC=				cc
 BINGRP=			bin
 MFILE=			${MAN:S/.1$/.cat0/g}
 MANDIR=			${OPT_MANDIR}/cat1
