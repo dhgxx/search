@@ -44,24 +44,24 @@ extern int s_usage(const char *, plan_t *);
 
 static const FLAGS flags[] = {
   /* ===== order start ===== */
-  { OPT_VERSION, &s_version },
-  { OPT_USAGE,   &s_usage   },
-  { OPT_SORT,    &s_sort    },
-  { OPT_PATH,    &s_path    },
-  { OPT_STAT,    &s_stat    },
-  { OPT_LSTAT,   &s_lstat   },
+  { OPT_VERSION, &s_version, "version" },
+  { OPT_USAGE,   &s_usage,   "usage" },
+  { OPT_SORT,    &s_sort,    "sort" },
+  { OPT_PATH,    &s_path,    "path" },
+  { OPT_STAT,    &s_stat,    "stat" },
+  { OPT_LSTAT,   &s_lstat,   "lstat" },
   /* ===== order end ===== */
-  { OPT_EMPTY,   &s_empty   },
-  { OPT_GRP,     &s_gid     },
-  { OPT_USR,     &s_uid     },
-  { OPT_NAME,    &s_name    },
-  { OPT_REGEX,   &s_regex   },
-  { OPT_TYPE,    &s_type    },
+  { OPT_EMPTY,   &s_empty,   "empty" },
+  { OPT_GRP,     &s_gid,     "gid" },
+  { OPT_USR,     &s_uid,     "uid" },
+  { OPT_NAME,    &s_name,    "name" },
+  { OPT_REGEX,   &s_regex,   "regex" },
+  { OPT_TYPE,    &s_type,    "type" },
   /* ===== order start ===== */
-  { OPT_XDEV,    &s_xdev    },
-  { OPT_DEL,     &s_delete  },
+  { OPT_XDEV,    &s_xdev,    "xdev" },
+  { OPT_DEL,     &s_delete,  "delete" },
   /* ===== order end ===== */
-  { OPT_NONE,    NULL       },
+  { OPT_NONE,    NULL,       "NULL" },
 };
 
 static int plan_add(unsigned int *, plist_t *);
@@ -209,7 +209,7 @@ plan_add(unsigned int *fl, plist_t *pl)
 		pl->cur = pl->start = new;
 		pl->size++;
 #ifdef _DEBUG_
-		warnx("null list, add plan(%d)\n", pl->size);
+		warnx("null list, add plan(%d): %s", pl->size, flags[i].name);
 #endif
 	  } else {
 		tmp = pl->cur = pl->start;
@@ -221,7 +221,7 @@ plan_add(unsigned int *fl, plist_t *pl)
 		pl->cur = new;
 		pl->size++;
 #ifdef _DEBUG_
-		warnx("add plan(%d)\n", pl->size);
+		warnx("add plan(%d): %s", pl->size, flags[i].name);
 #endif
 	  }
 	  

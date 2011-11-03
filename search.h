@@ -48,7 +48,7 @@
 #include <dlist.h>
 
 #define SEARCH_NAME "search"
-#define SEARCH_VERSION "0.5"
+#define SEARCH_VERSION "0.6"
 
 #define OPT_NONE    0x000000
 #define OPT_EMPTY   0x000002
@@ -116,6 +116,10 @@ typedef struct _plan_t {
   struct _plist_t *plans;
   struct _nstat_t *nstat;
   DLIST *paths;
+  /* files to be deleted */
+  DLIST *rfiles;
+  /* dirs to be deleted */
+  DLIST *rdirs;
 } plan_t;
 
 typedef struct _plan {
@@ -126,6 +130,7 @@ typedef struct _plan {
 typedef struct flags_t {
   unsigned int opt;
   int (*s_func) (const char *, struct _plan_t *);
+  const char *name;
 } FLAGS;
 
 #endif	/* _SEARCH_H_ */

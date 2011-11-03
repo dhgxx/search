@@ -119,8 +119,14 @@ main(int argc, char *argv[])
 	case 0:
 	  if (opt_empty == 1)
 		plan.flags |= OPT_EMPTY;
-	  if (opt_delete == 1)
+	  if (opt_delete == 1) {
 		plan.flags |=  OPT_DEL;
+		if ((plan.rfiles = dl_init()) == NULL ||
+			(plan.rdirs = dl_init()) == NULL) {
+		  warnx("error initiating lists for deletion!\n");
+		  return (-1);
+		}
+	  }
 	  break;
 	case 's':
 	  plan.flags |= OPT_SORT;
@@ -235,6 +241,16 @@ cleanup(int sig)
   if (plan.paths) {
 	dl_free(plan.paths);
 	plan.paths = NULL;
+  }
+
+  if (plan.rfiles) {
+	dl_free(plan.rfiles);
+	plan.rfiles = NULL;
+  }
+
+  if (plan.rdirs) {
+	dl_free(plan.rdirs);
+	plan.rdirs = NULL;
   }
 
   if (plan.mt != NULL) {

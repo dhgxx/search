@@ -196,6 +196,7 @@ walk_through(const char *name, plan_t *p)
   static struct dirent *dir;
   DIR *dirp;
   DLIST *paths;
+  DLIST *rfiles, *rdirs;
   plist_t *pl;
 
   if (name == NULL ||
@@ -235,6 +236,11 @@ walk_through(const char *name, plan_t *p)
 		paths = NULL;
 		return;
 	  }
+	}
+
+	/* we do not want to display names for files/dirs to be deleted! */
+	if (pl->cur->s_func == &s_delete) {
+	  retval = -1;
 	}
 	
 	if (pl->cur) {
@@ -287,7 +293,7 @@ walk_through(const char *name, plan_t *p)
 	if (paths->cur)
 	  paths->cur = paths->cur->next;
   }
-
+  
   dl_free(paths);
   paths = NULL;
   return;
@@ -538,7 +544,18 @@ s_delete(const char *name, plan_t *p)
 	return (-1);
   }
 
-  dislink(name, p->nstat->type);
+  if (p->nstat->type == NT_ISDIR) {
+	dl_append(name, p->rdirs);
+#ifdef _DEBUG_	
+	(void)fprintf(stderr, "directory: `%s' to be deleted\n", name);
+#endif	
+  } else {
+    dl_append(name, p->rfiles);
+#ifdef _DEBUG_	
+	(void)fprintf(stderr, "file: `%s' to be deleted\n", name);
+#endif	
+  }
+
   return (0);
 }
 
@@ -546,12 +563,15 @@ int
 s_path(const char *name , plan_t *p)
 {
   DLIST *paths;
+  DLIST *rfiles, *rdirs;
   
   if (p == NULL) {
 	return (-1);
   }
 
   paths = p->paths;
+  rfiles = p->rfiles;
+  rdirs = p->rdirs;
   
   if (paths == NULL ||
 	  dl_empty(paths))
@@ -562,6 +582,31 @@ s_path(const char *name , plan_t *p)
 	walk_through(paths->cur->ent, p);
 	if (paths->cur != NULL) {
 	  paths->cur = paths->cur->next;
+	}
+  }
+
+  /* delete files */
+  if (rfiles) {
+	rfiles->cur = rfiles->tail;
+	while (rfiles->cur != NULL) {
+	  /* to delete files, we need to specify its file type */
+#ifdef _DEBUG_
+	  warnx("%s deleted!", rfiles->cur->ent);
+#endif	  
+	  dislink(rfiles->cur->ent, NT_UNKNOWN);
+	  rfiles->cur = rfiles->cur->pre;
+	}
+  }
+
+  /* delete dirs */
+  if (rdirs) {
+	rdirs->cur = rdirs->tail;
+	while (rdirs->cur != NULL) {
+#ifdef _DEBUG_		
+	  warnx("%s deleted!", rdirs->cur->ent);
+#endif		
+	  dislink(rdirs->cur->ent, NT_ISDIR);
+	  rdirs->cur = rdirs->cur->pre;
 	}
   }
 
