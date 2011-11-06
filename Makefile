@@ -43,7 +43,7 @@ MKWHATIS=		/usr/libexec/makewhatis
 .if defined(CFLAGS)
 MYCFLAGS=		-D_${OSNAME}_ ${CFLAGS}
 .else
-MYCFLAGS=		-D_{OSNAME}_ -O2 -pipe
+MYCFLAGS=		-D_${OSNAME}_ -O2 -pipe -fno-strict-aliasing
 .endif
 
 .if defined(DEBUG)

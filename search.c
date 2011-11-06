@@ -74,7 +74,7 @@ main(int argc, char *argv[])
 
   if (init_plan(&plan) < 0) {
 #ifdef _DEBUG_
-	warnx("init_plan() failed!\n");
+	warnx("init_plan() failed!");
 #endif
 	cleanup(0);
 	exit (1);
@@ -123,7 +123,7 @@ main(int argc, char *argv[])
 		plan.flags |=  OPT_DEL;
 		if ((plan.rfiles = dl_init()) == NULL ||
 			(plan.rdirs = dl_init()) == NULL) {
-		  warnx("error initiating lists for deletion!\n");
+		  warnx("error initiating lists for deletion!");
 		  return (-1);
 		}
 	  }
@@ -196,7 +196,7 @@ main(int argc, char *argv[])
 
   if (find_plan(argc, argv, &plan) < 0) {
 #ifdef _DEBUG_
-	warnx("find_plan() failed!\n");
+	warnx("find_plan() failed!");
 #endif
 	cleanup(0);
 	exit (1);
@@ -204,7 +204,7 @@ main(int argc, char *argv[])
   
   if (add_plan(&plan) < 0) {
 #ifdef _DEBUG_
-	warnx("add_plan() failed!\n");
+	warnx("add_plan() failed!");
 #endif
 	cleanup(0);
 	exit (1);
@@ -213,7 +213,7 @@ main(int argc, char *argv[])
   ret = execute_plan(&plan);
 
 #ifdef _DEBUG_
-  warnx("ret=%d\n", ret);
+  warnx("ret=%d", ret);
 #endif
 
   cleanup(0);

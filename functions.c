@@ -227,7 +227,7 @@ walk_through(const char *name, plan_t *p)
   while (pl->cur != NULL) {
 	pl->retval = (retval |= pl->cur->s_func(name, p));
 #ifdef _DEBUG_
-	(void)fprintf(stderr, "retval=%d\n", retval);
+	warnx("retval=%d", retval);
 #endif
 
 	if (pl->cur->s_func == &s_xdev) {
@@ -377,7 +377,7 @@ s_name(const char *name, plan_t *p)
 	pattern = "*";
 #ifdef _DEBUG_
   else {
-	printf("pattern=%s, plen=%d\n", pattern, plen);
+	warnx("pattern=%s, plen=%d", pattern, plen);
 	}
 #endif 
   if (p->mt->mflag & REG_ICASE) {
@@ -547,12 +547,12 @@ s_delete(const char *name, plan_t *p)
   if (p->nstat->type == NT_ISDIR) {
 	dl_append(name, p->rdirs);
 #ifdef _DEBUG_	
-	(void)fprintf(stderr, "directory: `%s' to be deleted\n", name);
+	warnx("directory: `%s' to be deleted", name);
 #endif	
   } else {
     dl_append(name, p->rfiles);
 #ifdef _DEBUG_	
-	(void)fprintf(stderr, "file: `%s' to be deleted\n", name);
+	warnx("file: `%s' to be deleted", name);
 #endif	
   }
 

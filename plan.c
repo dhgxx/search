@@ -117,7 +117,7 @@ find_plan(int argc, char **argv, plan_t *p)
   if (argc > 0) {
 	for (i = 0; i < argc && argv[i]; i++) {
 #ifdef _DEBUG_
-	  warnx("added path %s\n", argv[i]);
+	  warnx("added path %s", argv[i]);
 #endif
 	  ret = dl_append(argv[i], p->paths);
 	}
@@ -160,19 +160,19 @@ free_plan(plist_t **plist)
   i = 0;
   if ((pl->cur = pl->start) == NULL) {
 #ifdef _DEBUG_
-	warnx("no plan!\n");
+	warnx("no plan!");
 #endif
   }
   
 #ifdef _DEBUG_
-  warnx("We have %d plan(s) to free!\n", pl->size);
+  warnx("We have %d plan(s) to free!", pl->size);
 #endif
   
   while (pl->cur != NULL) {
 	tmp = pl->cur;
 	pl->cur = pl->cur->next;
 #ifdef _DEBUG_
-	warnx("free plan (%d)\n", i);
+	warnx("free plan (%d)", i);
 #endif
 	tmp->s_func = NULL;
 	free(tmp);
@@ -208,9 +208,6 @@ plan_add(unsigned int *fl, plist_t *pl)
 	  if (pl->start == NULL) {
 		pl->cur = pl->start = new;
 		pl->size++;
-#ifdef _DEBUG_
-		warnx("null list, add plan(%d): %s", pl->size, flags[i].name);
-#endif
 	  } else {
 		tmp = pl->cur = pl->start;
 		while (pl->cur != NULL) {
@@ -220,11 +217,12 @@ plan_add(unsigned int *fl, plist_t *pl)
 		tmp->next = new;
 		pl->cur = new;
 		pl->size++;
-#ifdef _DEBUG_
-		warnx("add plan(%d): %s", pl->size, flags[i].name);
-#endif
 	  }
-	  
+
+#ifdef _DEBUG_
+	  warnx("added plan(%d): %s", pl->size, flags[i].name);
+#endif
+
 	  *fl &= ~(flags[i].opt);
 	  if (flags[i].opt & OPT_VERSION)
 		return (0);
