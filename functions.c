@@ -28,6 +28,7 @@
 #include <grp.h>
 #include <libgen.h>
 #include <pwd.h>
+#include <sysexits.h>
 
 #include "search.h"
 
@@ -113,10 +114,10 @@ regexcomp(match_t *mt)
 
   if (ret != 0) {
 	if (regerror(ret, fmt, msg, LINE_MAX) > 0) {
-	  warnx("%s: %s",
-			pattern, msg);
+	  errx(EX_DATAERR, "-r %s: %s",
+		   pattern, msg);
 	} else {
-	  warn("%s", pattern);
+	  errx(EX_DATAERR, "-r %s", pattern);
 	}
 	regfree(fmt);
 	return (-1);
@@ -196,7 +197,6 @@ walk_through(const char *name, plan_t *p)
   static struct dirent *dir;
   DIR *dirp;
   DLIST *paths;
-  DLIST *rfiles, *rdirs;
   plist_t *pl;
 
   if (name == NULL ||
@@ -332,10 +332,10 @@ s_regex(const char *name, plan_t *p)
 
   if (ret != 0 && ret != REG_NOMATCH) {
 	if (regerror(ret, fmt, msg, LINE_MAX) > 0) {
-	  warnx("%s: %s",
-			pattern, msg);
+	  errx(1, "%s: %s",
+		   pattern, msg);
 	} else {
-	  warn("%s", pattern);
+	  errx(1, "%s", pattern);
 	}
 	regfree(fmt);
 	return (-1);
@@ -429,6 +429,8 @@ s_gid(const char *name __unused, plan_t *p)
 	return (-1);
   if (p->nstat == NULL)
 	return (-1);
+
+/* uid can never be less than 0 */
 /*
   if (p->nstat->uid < 0)
 	return (-1);
@@ -440,7 +442,7 @@ s_gid(const char *name __unused, plan_t *p)
 	grp = getgrnam(s);
   
   if (grp == NULL) {
-	errx(1, "--group: %s: no such group", p->args->sgid);
+	errx(EX_NOUSER, "--group: %s: no such group", p->args->sgid);
   } else if (grp->gr_gid != p->nstat->gid) {
 	return (-1);
   }
@@ -469,7 +471,7 @@ s_uid(const char *name __unused, plan_t *p)
 	pwd = getpwnam(s);
   
   if (pwd == NULL) {
-	errx(1, "--user: %s: no such user", p->args->suid);
+	errx(EX_NOUSER, "--user: %s: no such user", p->args->suid);
   } else if (pwd->pw_uid != p->nstat->uid) {
 	return (-1);
   }
@@ -585,11 +587,14 @@ s_path(const char *name , plan_t *p)
 	}
   }
 
-  /* delete files */
+  /*  --- delete files ---
+   *  must be here. because we have to wait for
+   *  walk_through() to terminate.
+   */
   if (rfiles) {
 	rfiles->cur = rfiles->tail;
 	while (rfiles->cur != NULL) {
-	  /* to delete files, we need to specify its file type */
+	  /* to delete files, we have no need to specify its file type */
 #ifdef _DEBUG_
 	  warnx("%s deleted!", rfiles->cur->ent);
 #endif	  
