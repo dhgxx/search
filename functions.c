@@ -32,7 +32,7 @@
 
 #include "search.h"
 
-static void out(const char *);
+static __inline void out(const char *);
 static void dislink(const char *, NODE);
 static int  regexcomp(match_t *);
 static int  nodestat(const char *, plan_t *, int (*) (const char *, struct stat *));
@@ -52,7 +52,7 @@ int s_path(const char *, plan_t *);
 int s_version(const char *, plan_t *);
 int s_usage(const char *, plan_t *);
 
-static void
+static __inline void
 out(const char *s)
 {
   if (s == NULL)
@@ -212,20 +212,18 @@ walk_through(const char *name, plan_t *p)
   need_sort = 0;
   
   pl = p->plans;
-  pl->cur = pl->start;
-  while (pl->cur != NULL) {
+  
+  for (pl->cur = pl->start; pl->cur != NULL; pl->cur = pl->cur->next) {
+	
 	if (pl->cur->s_func == &s_sort) {
 	  need_sort = 1;
 	}
-	if (pl->cur->s_func == &s_path) {
-	  pl->cur = pl->cur->next;
-	  break;
+
+	/* bypass s_path() */
+	if (pl->cur->s_func != &s_path) {
+	  pl->retval = (retval |= pl->cur->s_func(name, p));
 	}
-	pl->cur = pl->cur->next;
-  }
-  
-  while (pl->cur != NULL) {
-	pl->retval = (retval |= pl->cur->s_func(name, p));
+	
 #ifdef _DEBUG_
 	warnx("retval=%d", retval);
 #endif
@@ -241,11 +239,7 @@ walk_through(const char *name, plan_t *p)
 	/* we do not want to display names for files/dirs to be deleted! */
 	if (pl->cur->s_func == &s_delete) {
 	  retval = -1;
-	}
-	
-	if (pl->cur) {
-	  pl->cur = pl->cur->next;
-	}
+	}	
   }
   
   if (retval == 0) {
@@ -286,12 +280,9 @@ walk_through(const char *name, plan_t *p)
   if (need_sort) {
 	dl_sort(paths);
   }
- 
-  paths->cur = paths->head;
-  while (paths->cur != NULL) {
+  
+  for (paths->cur = paths->head; paths->cur != NULL; paths->cur = paths->cur->next) {
 	walk_through(paths->cur->ent, p);
-	if (paths->cur)
-	  paths->cur = paths->cur->next;
   }
   
   dl_free(paths);
@@ -430,11 +421,6 @@ s_gid(const char *name __unused, plan_t *p)
   if (p->nstat == NULL)
 	return (-1);
 
-/* uid can never be less than 0 */
-/*
-  if (p->nstat->uid < 0)
-	return (-1);
-*/ 
   id = strtol(p->args->sgid, &s, 0);
   if (s[0] == '\0')
 	grp = getgrgid(id);
@@ -579,39 +565,30 @@ s_path(const char *name , plan_t *p)
 	  dl_empty(paths))
 	return (-1);
   
-  paths->cur = paths->head;
-  while (paths->cur != NULL) {
+  for (paths->cur = paths->head; paths->cur != NULL; paths->cur = paths->cur->next) {
 	walk_through(paths->cur->ent, p);
-	if (paths->cur != NULL) {
-	  paths->cur = paths->cur->next;
-	}
   }
-
   /*  --- delete files ---
    *  must be here. because we have to wait for
    *  walk_through() to terminate.
    */
   if (rfiles) {
-	rfiles->cur = rfiles->tail;
-	while (rfiles->cur != NULL) {
+	for (rfiles->cur = rfiles->tail; rfiles->cur != NULL; rfiles->cur = rfiles->cur->pre) {
 	  /* to delete files, we have no need to specify its file type */
 #ifdef _DEBUG_
 	  warnx("%s deleted!", rfiles->cur->ent);
 #endif	  
 	  dislink(rfiles->cur->ent, NT_UNKNOWN);
-	  rfiles->cur = rfiles->cur->pre;
 	}
   }
 
   /* delete dirs */
   if (rdirs) {
-	rdirs->cur = rdirs->tail;
-	while (rdirs->cur != NULL) {
+	for (rdirs->cur = rdirs->tail; rdirs->cur != NULL; rdirs->cur = rdirs->cur->pre) {
 #ifdef _DEBUG_		
 	  warnx("%s deleted!", rdirs->cur->ent);
 #endif		
 	  dislink(rdirs->cur->ent, NT_ISDIR);
-	  rdirs->cur = rdirs->cur->pre;
 	}
   }
 
@@ -662,4 +639,3 @@ s_version(const char *s __unused, plan_t *p __unused)
 				SEARCH_NAME, SEARCH_VERSION);
   return (0);
 }
-

@@ -41,8 +41,8 @@ extern void free_plan(plist_t **);
 static int opt_empty;
 static int opt_delete;
 
-static void ftype_err(const char *);
-static void cleanup(int);
+static __inline void ftype_err(const char *);
+static __inline void cleanup(int);
 
 static struct option longopts[] = {
 	{ "gid",     required_argument, NULL,        2  },
@@ -220,7 +220,7 @@ main(int argc, char *argv[])
   return (ret);
 }
 
-static void
+static __inline void
 ftype_err(const char *s)
 {
   if (s == NULL)
@@ -230,7 +230,7 @@ ftype_err(const char *s)
   return;
 }
 
-static void
+static __inline void
 cleanup(int sig)
 {
   if (plan.plans) {

@@ -61,7 +61,7 @@ static const FLAGS flags[] = {
   { OPT_XDEV,    &s_xdev,    "xdev" },
   { OPT_DEL,     &s_delete,  "delete" },
   /* ===== order end ===== */
-  { OPT_NONE,    NULL,       "NULL" },
+  { OPT_NONE,    NULL,        NULL },
 };
 
 static int plan_add(unsigned int *, plist_t *);
