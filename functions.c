@@ -159,6 +159,7 @@ regexcomp(match_t *mt)
 	pattern = mt->pattern;
 
   ret = regcomp(fmt, pattern, mflag);
+  regfree(fmt);
 
   if (ret != 0) {
 	if (regerror(ret, fmt, msg, LINE_MAX) > 0) {
@@ -167,7 +168,7 @@ regexcomp(match_t *mt)
 	} else {
 	  errx(EX_DATAERR, "-r %s", pattern);
 	}
-	regfree(fmt);
+	//regfree(fmt);
 	return (-1);
   }
   return (0);
@@ -358,7 +359,7 @@ s_regex(const char *name, plan_t *p)
 
   if ((d_name = basename(name)) == NULL)
 	return (-1);
-  
+ 
   fmt = &(p->mt->fmt);
   pattern = p->mt->pattern;
   plen = strlen(d_name);
@@ -369,6 +370,9 @@ s_regex(const char *name, plan_t *p)
   matched = 0;
 
   ret = regexec(fmt, d_name, 1, &pmatch, REG_STARTEND);
+  regfree(fmt);
+  free(d_name);
+  d_name = NULL;
 
   if (ret != 0 && ret != REG_NOMATCH) {
 	if (regerror(ret, fmt, msg, LINE_MAX) > 0) {
@@ -377,7 +381,6 @@ s_regex(const char *name, plan_t *p)
 	} else {
 	  errx(1, "%s", pattern);
 	}
-	regfree(fmt);
 	return (-1);
   }
 
@@ -430,6 +433,9 @@ s_name(const char *name, plan_t *p)
   warnx("name: pattern=%s, name=%s :%s MATCHED!",
 		pattern, d_name, ((matched == 0) ? "" : "NOT"));
 #endif
+
+  free(d_name);
+  d_name = NULL;
 
   return ((matched == 0) ? (0) : (-1));
 }
