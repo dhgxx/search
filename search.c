@@ -56,6 +56,8 @@ static struct option longopts[] = {
 	{ "empty",   no_argument,       &opt_empty,  1  },
 	{ "delete",  no_argument,       &opt_delete, 1  },
 	{ "sort",    no_argument,       NULL,       's' },
+	{ "nogroup", no_argument,       NULL,        6  },
+	{ "nouser",  no_argument,       NULL,        7  },
 	{ "version", no_argument,       NULL,       'v' },
 	{ "xdev",    no_argument,       NULL,       'x' },
 	{ NULL,      0,                 NULL,        0  }
@@ -94,6 +96,14 @@ main(int argc, char *argv[])
 	  bzero(plan.args->suid, LINE_MAX);
 	  strlcpy(plan.args->suid, optarg, LINE_MAX);
 	  break;
+	case 6:
+      plan.flags |= OPT_NGRP;
+      plan.flags |= OPT_IDS;
+      break;
+	case 7:
+      plan.flags |= OPT_NUSR;
+      plan.flags |= OPT_IDS;
+      break;
 	case 'f':
 	  plan.flags |= OPT_PATH;
 	  dl_append(optarg, plan.paths);

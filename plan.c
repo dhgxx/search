@@ -39,27 +39,33 @@ extern int s_sort(const char *, plan_t *);
 extern int s_delete(const char *, plan_t *);
 extern int s_path(const char *, plan_t *);
 extern int s_type(const char *, plan_t *);
+extern int s_getids(const char *, plan_t *);
+extern int s_nogroup(const char *, plan_t *);
+extern int s_nouser(const char *, plan_t *);
 extern int s_version(const char *, plan_t *);
 extern int s_usage(const char *, plan_t *);
 
 static const FLAGS flags[] = {
   /* ===== order start ===== */
-  { OPT_VERSION, &s_version, "version", 0 },
-  { OPT_USAGE,   &s_usage,   "usage",   0 },
-  { OPT_SORT,    &s_sort,    "sort",    0 },
-  { OPT_PATH,    &s_path,    "path",    0 },
-  { OPT_STAT,    &s_stat,    "stat",    1 },
-  { OPT_LSTAT,   &s_lstat,   "lstat",   1 },
+  { OPT_VERSION, &s_version, "version",  0 },
+  { OPT_USAGE,   &s_usage,   "usage",    0 },
+  { OPT_IDS,     &s_getids,  "getids",   0 },
+  { OPT_SORT,    &s_sort,    "sort",     0 },
+  { OPT_PATH,    &s_path,    "path",     0 },
+  { OPT_STAT,    &s_stat,    "stat",     1 },
+  { OPT_LSTAT,   &s_lstat,   "lstat",    1 },
   /* ===== order end ===== */
-  { OPT_EMPTY,   &s_empty,   "empty",   1 },
-  { OPT_GRP,     &s_gid,     "gid",     1 },
-  { OPT_USR,     &s_uid,     "uid",     1 },
-  { OPT_NAME,    &s_name,    "name",    1 },
-  { OPT_REGEX,   &s_regex,   "regex",   1 },
-  { OPT_TYPE,    &s_type,    "type",    1 },
+  { OPT_EMPTY,   &s_empty,   "empty",    1 },
+  { OPT_GRP,     &s_gid,     "gid",      1 },
+  { OPT_USR,     &s_uid,     "uid",      1 },
+  { OPT_TYPE,    &s_type,    "type",     1 },
+  { OPT_NGRP,    &s_nogroup, "no_group", 1 },
+  { OPT_NAME,    &s_name,    "name",     1 },
+  { OPT_REGEX,   &s_regex,   "regex",    1 },
+  { OPT_NUSR,    &s_nouser,  "no_user",  1 },
   /* ===== order start ===== */
-  { OPT_XDEV,    &s_xdev,    "xdev",    1 },
-  { OPT_DEL,     &s_delete,  "delete",  1 },
+  { OPT_XDEV,    &s_xdev,    "xdev",     1 },
+  { OPT_DEL,     &s_delete,  "delete",   1 },
   /* ===== order end ===== */
   { OPT_NONE,    NULL,        NULL },
 };
@@ -243,10 +249,17 @@ plan_execute(plan_t *p)
   if ((p->plans->cur = p->plans->start) == NULL)
 	return (-1);
 
-  while (p->plans->cur != NULL && p->plans->cur->exec != 1) {
-	p->plans->retval = p->plans->cur->s_func(NULL, p);
-	if (p->plans->cur)
+  while (p->plans->cur != NULL) {
+	
+	if (p->plans->cur->exec != 1)
+	  p->plans->retval = p->plans->cur->s_func(NULL, p);
+	
+	if (p->plans->cur) {
+#ifdef _DEBUG_
+	  warnx("===> %s: retval=%d", p->plans->cur->func_name, p->plans->retval);
+#endif
 	  p->plans->cur = p->plans->cur->next;
+	}
   }
 
   return (p->plans->retval);

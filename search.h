@@ -51,18 +51,21 @@
 #define SEARCH_VERSION "0.6.1"
 
 #define OPT_NONE    0x000000
-#define OPT_EMPTY   0x000002
-#define OPT_GRP     0x000004
-#define OPT_USR     0x000008
-#define OPT_XDEV    0x000020
-#define OPT_DEL     0x000040
-#define OPT_SORT    0x000080
-#define OPT_STAT    0x000200
-#define OPT_LSTAT   0x000400
-#define OPT_NAME    0x000800
-#define OPT_REGEX   0x002000
-#define OPT_PATH    0x004000
-#define OPT_TYPE    0x008000
+#define OPT_EMPTY   0x000001
+#define OPT_GRP     0x000002
+#define OPT_USR     0x000004
+#define OPT_XDEV    0x000010
+#define OPT_DEL     0x000020
+#define OPT_SORT    0x000040
+#define OPT_STAT    0x000100
+#define OPT_LSTAT   0x000200
+#define OPT_NAME    0x000400
+#define OPT_REGEX   0x000800
+#define OPT_PATH    0x001000
+#define OPT_TYPE    0x002000
+#define OPT_IDS     0x004000
+#define OPT_NGRP    0x008000
+#define OPT_NUSR    0x010000
 #define OPT_VERSION 0x020000
 #define OPT_USAGE   0x040000
 

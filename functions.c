@@ -38,6 +38,8 @@ static int  regexcomp(match_t *);
 static int  nodestat(const char *, plan_t *, int (*) (const char *, struct stat *));
 static void walk_through(const char *, plan_t *);
 
+
+int s_getids(const char *, plan_t *);
 int s_regex(const char *, plan_t *);
 int s_name(const char *, plan_t *);
 int s_stat(const char *, plan_t *);
@@ -49,8 +51,18 @@ int s_xdev(const char *, plan_t *);
 int s_sort(const char *, plan_t *);
 int s_delete(const char *, plan_t *);
 int s_path(const char *, plan_t *);
+int s_nogroup(const char *, plan_t *);
+int s_nouser(const char *, plan_t *);
 int s_version(const char *, plan_t *);
 int s_usage(const char *, plan_t *);
+
+#define NIDS 2048
+
+static struct passwd *pwd;
+static struct _ids {
+  int uids[NIDS];
+  int gids[NIDS];
+} ids;
 
 static __inline void
 out(const char *s)
@@ -59,6 +71,33 @@ out(const char *s)
 	return;
   
   (void)fprintf(stdout, "%s\n", s);
+}
+
+int
+s_getids(const char *name __unused, plan_t *p __unused)
+{
+  int i;
+
+  errno = 0;
+  
+  for (i = 0; i < NIDS; i++) {
+	ids.uids[i] = -1;
+	ids.gids[i] = -1;
+  }
+
+  i = 0;
+  while ((pwd = getpwent()) != NULL) {
+	ids.uids[i] = pwd->pw_uid;
+	ids.gids[i] = pwd->pw_gid;
+	i++;
+  }
+
+  endpwent();
+
+  if (errno != 0)
+	return (-1);
+
+  return (0);
 }
 
 static void
@@ -223,11 +262,10 @@ walk_through(const char *name, plan_t *p)
 	/* bypass s_path() */
 	if (pl->cur->exec == 1) {
 	  pl->retval = (retval |= pl->cur->s_func(name, p));
-	}
-	
 #ifdef _DEBUG_
-	warnx("retval=%d", retval);
+	  warnx("%s: retval=%d", pl->cur->func_name, pl->retval);
 #endif
+	}
 
 	if (pl->cur->s_func == &s_xdev) {
 	  if (retval != 0) {
@@ -380,7 +418,7 @@ s_name(const char *name, plan_t *p)
   matched = fnmatch(pattern, d_name, mflag);
   
 #ifdef _DEBUG_
-  warnx("exec_name: pattern=%s, name=%s :%s MATCHED!",
+  warnx("name: pattern=%s, name=%s :%s MATCHED!",
 		pattern, d_name, ((matched == 0) ? "" : "NOT"));
 #endif
 
@@ -615,6 +653,43 @@ s_type(const char *s __unused, plan_t *p)
 		p->args->type, p->nstat->type);
 #endif
   return ((p->args->type == p->nstat->type) ? (0) : (-1));
+}
+
+
+int
+s_nogroup(const char *name __unused, plan_t *p)
+{
+  int i;
+
+  if (p == NULL)
+	return (-1);
+  if (p->nstat == NULL)
+	return (-1);
+
+  for (i = 0; ids.gids[i] >= 0; i++) {
+	if (p->nstat->gid == ids.gids[i])
+	  return (-1);
+  }
+  
+  return (0);
+}
+
+int
+s_nouser(const char *name __unused, plan_t *p)
+{
+  int i;
+
+  if (p == NULL)
+	return (-1);
+  if (p->nstat == NULL)
+	return (-1);
+
+  for (i = 0; ids.uids[i] >= 0; i++) {
+	if (p->nstat->uid == ids.uids[i])
+	  return (-1);
+  }
+
+  return (0);
 }
 
 int
