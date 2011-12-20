@@ -59,6 +59,7 @@ int s_usage(const char *, plan_t *);
 #define NIDS 2048
 
 static struct passwd *pwd;
+static struct group *grp;
 static struct _ids {
   int uids[NIDS];
   int gids[NIDS];
@@ -81,23 +82,31 @@ s_getids(const char *name __unused, plan_t *p __unused)
   errno = 0;
   
   for (i = 0; i < NIDS; i++) {
-	ids.uids[i] = -1;
-	ids.gids[i] = -1;
+	ids.uids[i] = ids.gids[i ] = -1;
   }
 
   i = 0;
   while ((pwd = getpwent()) != NULL) {
+#ifdef _DEBUG_	
+	warnx("uid=%d", ids.uids[i]);
+#endif
 	ids.uids[i] = pwd->pw_uid;
-	ids.gids[i] = pwd->pw_gid;
+	i++;
+  }
+
+  i = 0;
+  while ((grp = getgrent()) != NULL) {
+#ifdef _DEBUG_
+	warnx("gid=%d", ids.gids[i]);
+#endif
+	ids.gids[i] = grp->gr_gid;
 	i++;
   }
 
   endpwent();
+  endgrent();
 
-  if (errno != 0)
-	return (-1);
-
-  return (0);
+  return (errno == 0? 0 : -1);
 }
 
 static void
