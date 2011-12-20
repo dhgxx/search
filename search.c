@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 2005-2010 Denise H. G. All rights reserved
+ * Copyright (c) 2005-2010 Denise H. G. <darcsis@gmail.com>
+ * All rights reserved
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,138 +25,247 @@
  *
  */
 
+#include <getopt.h>
+
 #include "search.h"
-#include "extern.h"
+  
+extern char *optarg;
+extern int optind;
+
+extern int init_plan(plan_t *);
+extern int find_plan(int, char **, plan_t *);
+extern int execute_plan(plan_t *);
+extern int add_plan(plan_t *);
+extern void free_plan(plist_t **);
+
+static int opt_empty;
+static int opt_delete;
+
+static __inline void ftype_err(const char *);
+static __inline void cleanup(int);
+
+static struct option longopts[] = {
+	{ "gid",     required_argument, NULL,        2  },
+	{ "group",   required_argument, NULL,        3  },
+	{ "path",    required_argument, NULL,       'f' },
+	{ "name",    required_argument, NULL,       'n' },
+	{ "regex",   required_argument, NULL,       'r' },
+	{ "type",    required_argument, NULL,       't' },
+	{ "user",    required_argument, NULL,        4  },
+	{ "uid",     required_argument, NULL,        5  },
+	{ "empty",   no_argument,       &opt_empty,  1  },
+	{ "delete",  no_argument,       &opt_delete, 1  },
+	{ "sort",    no_argument,       NULL,       's' },
+	{ "version", no_argument,       NULL,       'v' },
+	{ "xdev",    no_argument,       NULL,       'x' },
+	{ NULL,      0,                 NULL,        0  }
+  };
 
 plan_t plan;
-
-static int init_plan(plan_t *);
-static void walk(dl_node **);
-static void free_mt(match_t **);
-static void cleanup(int);
 
 int
 main(int argc, char *argv[])
 {
-  
-  extern char *optarg;
-  extern int optind;
-  
-  int i;
-  static struct stat *stbuf;
-  
+  int i, ch;
+  int ret;
+    
   (void)setlocale(LC_CTYPE, "");
   signal(SIGINT, cleanup);
 
   if (init_plan(&plan) < 0) {
-	warnx("init_plan()");
-	cleanup(1);
+#ifdef _DEBUG_
+	warnx("init_plan() failed!");
+#endif
+	cleanup(0);
 	exit (1);
   }
-  
-  if (lookup_options(argc, argv, &plan) < 0) {
-	warnx("lookup_options()");
-	cleanup(1);
-	exit (1);
-  }
-  
+
+  while ((ch = getopt_long(argc, argv, "EILPsvxf:n:r:t:", longopts, NULL)) != -1)
+	switch (ch) {
+	case 2:
+	case 3:
+	  plan.flags |= OPT_GRP;
+	  bzero(plan.args->sgid, LINE_MAX);
+	  strlcpy(plan.args->sgid, optarg, LINE_MAX);
+	  break;
+	case 4:
+	case 5:
+	  plan.flags |=  OPT_USR;
+	  bzero(plan.args->suid, LINE_MAX);
+	  strlcpy(plan.args->suid, optarg, LINE_MAX);
+	  break;
+	case 'f':
+	  plan.flags |= OPT_PATH;
+	  dl_append(optarg, plan.paths);
+	  break;
+	case 'n':
+	  if (!(plan.flags & OPT_NAME)) {
+		if (plan.flags & OPT_REGEX)
+		  plan.flags &= ~OPT_REGEX;
+		plan.flags |= OPT_NAME;
+	  }
+	  bzero(plan.mt->pattern, LINE_MAX);
+	  strlcpy(plan.mt->pattern, optarg, LINE_MAX);
+	  break;
+	case 'r':
+	  if (!(plan.flags & OPT_REGEX)) {
+		if (plan.flags & OPT_NAME)
+		  plan.flags &= ~OPT_NAME;
+		plan.flags |= OPT_REGEX;
+	  }
+	  bzero(plan.mt->pattern, LINE_MAX);
+	  strlcpy(plan.mt->pattern, optarg, LINE_MAX);
+	  break;
+	case 0:
+	  if (opt_empty == 1)
+		plan.flags |= OPT_EMPTY;
+	  if (opt_delete == 1) {
+		plan.flags |=  OPT_DEL;
+		if ((plan.rfiles = dl_init()) == NULL ||
+			(plan.rdirs = dl_init()) == NULL) {
+		  warnx("error initiating lists for deletion!");
+		  return (-1);
+		}
+	  }
+	  break;
+	case 's':
+	  plan.flags |= OPT_SORT;
+	  break;
+	case 'v':
+	  plan.flags |= OPT_VERSION;
+	  break;
+	case 'x':
+	  plan.flags |= OPT_XDEV;
+	  break;
+	case 't':
+	  plan.flags |= OPT_TYPE;
+	  switch (optarg[0]) {
+	  case 'p':
+		plan.args->type = NT_ISFIFO;
+		break;
+	  case 'c':
+		plan.args->type = NT_ISCHR;
+		break;
+	  case 'd':
+		plan.args->type = NT_ISDIR;
+		break;
+	  case 'b':
+		plan.args->type = NT_ISBLK;
+		break;
+	  case 'l':
+		plan.args->type = NT_ISLNK;
+		break;
+	  case 's':
+		plan.args->type = NT_ISSOCK;
+		break;
+	  case 'f':
+	  case '\0':
+		plan.args->type = NT_ISREG;
+		break;
+	  default:
+		ftype_err(optarg);
+		cleanup(0);
+		exit (1);
+	  }
+	  break;
+	case 'E':
+	  plan.mt->mflag |= REG_EXTENDED;
+	  break;
+	case 'I':
+	  plan.mt->mflag |= REG_ICASE;
+	  break;
+	case 'L':
+	  if (plan.flags & OPT_LSTAT) {
+		plan.flags &= ~OPT_LSTAT;
+		plan.flags |= OPT_STAT;
+	  }
+	  break;
+	case 'P':
+	  if (plan.flags & OPT_STAT) {
+		plan.flags &= ~OPT_STAT;
+		plan.flags |= OPT_LSTAT;
+	  }
+	  break;
+	default:
+	  plan.flags |= OPT_USAGE;
+	  break;
+	}
+
   argc -= optind;
   argv += optind;
-    
-  if (comp_regex(plan.mt) < 0) {
-	cleanup (1);
-	exit (1);
-  }
 
-  if (argc == 0 &&
-	  dl_empty(&(plan.paths))) {
-	display_usage();
-	cleanup(1);
+  if (find_plan(argc, argv, &plan) < 0) {
+#ifdef _DEBUG_
+	warnx("find_plan() failed!");
+#endif
+	cleanup(0);
 	exit (1);
   }
   
-  if (argc > 0) {
-	for (i = 0; i < argc && argv[i]; i++)
-	  dl_append(argv[i], &(plan.paths));
+  if (add_plan(&plan) < 0) {
+#ifdef _DEBUG_
+	warnx("add_plan() failed!");
+#endif
+	cleanup(0);
+	exit (1);
   }
-  
-  if (plan.flags & OPT_SORT)
-	dl_sort(&(plan.paths));
-  dl_foreach(&(plan.paths), walk);
 
-  cleanup(1);
-  exit(0);
+  ret = execute_plan(&plan);
+
+#ifdef _DEBUG_
+  warnx("ret=%d", ret);
+#endif
+
+  cleanup(0);
+  return (ret);
 }
 
-static int
-init_plan(plan_t *p)
+static __inline void
+ftype_err(const char *s)
 {
-  p->mt = (match_t *)malloc(sizeof(match_t));
-  p->stat = (node_stat_t *)malloc(sizeof(node_stat_t));
-  p->paths = dl_init();
-  
-  if (p->mt == NULL ||
-	  p->stat == NULL ||
-	  p->paths == NULL)
-	return (-1);
-
-  p->flags = OPT_NONE;
-  p->type = NT_UNKNOWN;
-  p->odev = 0;
-  p->stat_func = lstat;
-  p->exec_func = exec_name;
-  p->mt->mflag = REG_BASIC;
-  bzero(p->group, LINE_MAX);
-  bzero(p->user, LINE_MAX);
-  bzero(p->mt->pattern, LINE_MAX);
-  
-  return (0);
-}
-
-static void
-walk(dl_node **n)
-{
-  dl_node *np = *n;
-  
-  if (np == NULL)
+  if (s == NULL)
 	return;
 
-  walk_through(np->ent, np->ent, &plan);
-}
-
-static void
-free_mt(match_t **m)
-{
-  match_t *mt = *m;
-
-  if (mt == NULL)
-	return;
-
-  if (&(mt->fmt) != NULL) {
-	regfree(&(mt->fmt));
-  }
-  
-  free(mt);
-  mt = NULL;
+  warnx("--type: %s: unknown type", s);
   return;
 }
 
-static void
+static __inline void
 cleanup(int sig)
 {
-  if (plan.paths != NULL) {
-	dl_free(&(plan.paths));
-	plan.paths = NULL;
+  if (plan.plans) {
+	free_plan(&(plan.plans));
+	plan.plans = NULL;
   }
   
+  if (plan.paths) {
+	dl_free(plan.paths);
+	plan.paths = NULL;
+  }
+
+  if (plan.rfiles) {
+	dl_free(plan.rfiles);
+	plan.rfiles = NULL;
+  }
+
+  if (plan.rdirs) {
+	dl_free(plan.rdirs);
+	plan.rdirs = NULL;
+  }
+
   if (plan.mt != NULL) {
-	free_mt(&(plan.mt));
+	free(plan.mt);
 	plan.mt = NULL;
   }
   
-  if (plan.stat != NULL) {
-	free(plan.stat);
-	plan.stat = NULL;
+  if (plan.args != NULL) {
+	free(plan.args);
+	plan.args = NULL;
+  }
+
+  if (plan.nstat != NULL) {
+	free(plan.nstat);
+	plan.nstat = NULL;
   }
   
   if (sig)

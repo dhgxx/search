@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 2005-2010 Denise H. G. All rights reserved
+ * Copyright (c) 2005-2010 Denise H. G. <darcsis@gmail.com>
+ * All rights reserved
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,62 +25,69 @@
  *
  */
 
+#include <grp.h>
 #include <libgen.h>
 #include <pwd.h>
-#include <grp.h>
+#include <sysexits.h>
 
 #include "search.h"
 
-static unsigned int delete = 0;
+static __inline void out(const char *);
+static void dislink(const char *, NODE);
+static int  regexcomp(match_t *);
+static int  nodestat(const char *, plan_t *, int (*) (const char *, struct stat *));
+static void walk_through(const char *, plan_t *);
 
-static void out(const char *);
-static node_t get_type(const char *, plan_t *);
-static int cook_entry(const char *, const char *, plan_t *);
-static int tell_group(const char *, const gid_t);
-static int tell_user(const char *, const uid_t);
-static void dislink(const char *, node_t);
-static void list_clear(DLIST **);
+int s_regex(const char *, plan_t *);
+int s_name(const char *, plan_t *);
+int s_stat(const char *, plan_t *);
+int s_lstat(const char *, plan_t *);
+int s_gid(const char *, plan_t *);
+int s_uid(const char *, plan_t *);
+int s_empty(const char *, plan_t *);
+int s_xdev(const char *, plan_t *);
+int s_sort(const char *, plan_t *);
+int s_delete(const char *, plan_t *);
+int s_path(const char *, plan_t *);
+int s_version(const char *, plan_t *);
+int s_usage(const char *, plan_t *);
 
-int comp_regex(match_t *);
-int exec_regex(const char *, match_t *);
-int exec_name(const char *, match_t *);
-void walk_through(const char *, const char *, plan_t *);
-
-int
-exec_name(const char *d_name, match_t *mt)
+static __inline void
+out(const char *s)
 {
-  int matched;
-  unsigned int plen, mflag;
-  char *pattern;
-
-  if (d_name == NULL)
-	return (-1);
-  if (mt == NULL)
-	return (-1);
+  if (s == NULL)
+	return;
   
-  mflag = 0;
-  pattern = mt->pattern;
-  plen = strlen(pattern);
-  matched = FNM_NOMATCH;
-  
-  if (plen == 0)
-	pattern = "*";
-  
-  if (mt->mflag & REG_ICASE) {
-	mflag = FNM_CASEFOLD | FNM_PERIOD | FNM_PATHNAME | FNM_NOESCAPE;
-  }
-
-#ifdef _DEBUG_
-  warnx("exec_name: pattern=%s, name=%s",
-		pattern, d_name);
-#endif
-  
-  matched = fnmatch(pattern, d_name, mflag);
-  return ((matched == 0) ? (0) : (-1));
+  (void)fprintf(stdout, "%s\n", s);
 }
 
-int
-comp_regex(match_t *mt)
+static void
+dislink(const char *path, NODE type)
+{  
+  if (path == NULL)
+	return;
+  
+  if ((0 == strncmp(path, ".", strlen(path) + 1)) ||
+	  (0 == strncmp(path, "..", strlen(path) + 1)))
+	return;
+  
+#ifdef _DEBUG_
+  warnx("dislink(%s): %s: to be deleted.", path, path);
+#endif
+  
+  if(type == NT_ISDIR) {
+	if (rmdir(path) < 0) {
+	  warn("--rmdir(%s)", path);
+	}
+  } else {
+	if (unlink(path) < 0) {
+	  warn("--unlink(%s)", path);
+	}
+  }
+}
+
+static int
+regexcomp(match_t *mt)
 {
   int ret;
   unsigned int plen, mflag;
@@ -106,10 +114,10 @@ comp_regex(match_t *mt)
 
   if (ret != 0) {
 	if (regerror(ret, fmt, msg, LINE_MAX) > 0) {
-	  warnx("%s: %s",
-			pattern, msg);
+	  errx(EX_DATAERR, "-r %s: %s",
+		   pattern, msg);
 	} else {
-	  warn("%s", pattern);
+	  errx(EX_DATAERR, "-r %s", pattern);
 	}
 	regfree(fmt);
 	return (-1);
@@ -117,22 +125,193 @@ comp_regex(match_t *mt)
   return (0);
 }
 
+static int
+nodestat(const char *name, plan_t *p,
+	int (*stat_f) (const char *s, struct stat *buf))
+{
+  int ret;
+  static struct stat stbuf;
+  DIR *dirp;
+  struct dirent *dir;
+
+  if (name == NULL)
+	return (NT_ERROR);
+  if (p == NULL)
+	return (NT_ERROR);
+  if (stat_f == NULL)
+	return (NT_ERROR);
+  if (p->nstat == NULL)
+	return (NT_ERROR);
+
+  if ((ret = stat_f(name, &stbuf)) < 0) {
+	warn("%s", name);
+	return (-1);
+  }
+
+  p->nstat->empty = 1;
+  p->nstat->gid = stbuf.st_gid;
+  p->nstat->uid = stbuf.st_uid;
+  p->nstat->dev = stbuf.st_dev;
+
+  if (S_ISBLK(stbuf.st_mode))
+	p->nstat->type = NT_ISBLK;
+  if (S_ISCHR(stbuf.st_mode))
+	p->nstat->type = NT_ISCHR;
+  if (S_ISDIR(stbuf.st_mode))
+	p->nstat->type = NT_ISDIR;
+  if (S_ISFIFO(stbuf.st_mode))
+	p->nstat->type = NT_ISFIFO;
+  if (S_ISLNK(stbuf.st_mode))
+	p->nstat->type = NT_ISLNK;
+  if (S_ISREG(stbuf.st_mode))
+	p->nstat->type = NT_ISREG;
+  if (S_ISSOCK(stbuf.st_mode))
+	p->nstat->type = NT_ISSOCK;
+
+  if (p->nstat->type != NT_ISDIR) {
+	if (stbuf.st_size != 0)
+	  p->nstat->empty = 0;
+  } else {
+	/* code from from BSD find(1) */
+	if ((dirp = opendir(name)) != NULL) {
+	  for (dir = readdir(dirp); dir; dir = readdir(dirp))
+		if (dir->d_name[0] != '.' ||
+			(dir->d_name[1] != '\0' &&
+			 (dir->d_name[1] != '.' || dir->d_name[2] != '\0'))) {
+		  p->nstat->empty = 0;
+		  break;
+		}
+	  closedir(dirp);
+	}
+	/* code from FreeBSD find(1). */
+  }
+  
+  return (0);
+}
+
+static void
+walk_through(const char *name, plan_t *p)
+{
+  int retval, need_sort;
+  char tmp_buf[MAXPATHLEN];
+  static struct dirent *dir;
+  DIR *dirp;
+  DLIST *paths;
+  plist_t *pl;
+
+  if (name == NULL ||
+	  p == NULL ||
+	  p->plans == NULL ||
+	  p->nstat == NULL)
+	return;
+
+  if ((paths = dl_init()) == NULL)
+	return;
+
+  retval = 0;
+  need_sort = 0;
+  
+  pl = p->plans;
+  
+  for (pl->cur = pl->start; pl->cur != NULL; pl->cur = pl->cur->next) {
+	
+	if (pl->cur->s_func == &s_sort) {
+	  need_sort = 1;
+	}
+
+	/* bypass s_path() */
+	if (pl->cur->s_func != &s_path) {
+	  pl->retval = (retval |= pl->cur->s_func(name, p));
+	}
+	
+#ifdef _DEBUG_
+	warnx("retval=%d", retval);
+#endif
+
+	if (pl->cur->s_func == &s_xdev) {
+	  if (retval != 0) {
+		dl_free(paths);
+		paths = NULL;
+		return;
+	  }
+	}
+
+	/* we do not want to display names for files/dirs to be deleted! */
+	if (pl->cur->s_func == &s_delete) {
+	  retval = -1;
+	}	
+  }
+  
+  if (retval == 0) {
+	out(name);
+  }
+
+  if (p->nstat->type != NT_ISDIR) {
+	dl_free(paths);
+	paths = NULL;
+	return;
+  }
+  
+  if (NULL == (dirp = opendir(name))) {
+	warn("%s", name);
+	dl_free(paths);
+	paths = NULL;
+	return;
+  }
+  
+  while (NULL != (dir = readdir(dirp))) {
+	
+	if ((0 == strncmp(dir->d_name, ".", strlen(dir->d_name) + 1)) ||
+		(0 == strncmp(dir->d_name, "..", strlen(dir->d_name) + 1))) {
+	  continue;
+	}
+
+	bzero(tmp_buf, MAXPATHLEN);
+	strlcpy(tmp_buf, name, MAXPATHLEN);
+	if ('/' != tmp_buf[strlen(tmp_buf) - 1])
+	  strlcat(tmp_buf, "/", MAXPATHLEN);
+	strlcat(tmp_buf, dir->d_name, MAXPATHLEN);
+
+	dl_append(tmp_buf, paths);
+  }
+  
+  closedir(dirp);
+
+  if (need_sort) {
+	dl_sort(paths);
+  }
+  
+  for (paths->cur = paths->head; paths->cur != NULL; paths->cur = paths->cur->next) {
+	walk_through(paths->cur->ent, p);
+  }
+  
+  dl_free(paths);
+  paths = NULL;
+  return;
+}
 
 int
-exec_regex(const char *d_name, match_t *mt)
+s_regex(const char *name, plan_t *p)
 {
   int ret, plen, matched;
-  char *pattern, msg[LINE_MAX];
+  char *pattern, *d_name, msg[LINE_MAX];
   static regex_t *fmt;
   regmatch_t pmatch;
 
-  if (d_name == NULL)
+  if (name == NULL)
 	return (-1);
-  if (mt == NULL)
+  if (p == NULL)
+	return (-1);
+  if (p->mt == NULL)
+	return (-1);
+  if (regexcomp(p->mt) < 0)
 	return (-1);
 
-  fmt = &(mt->fmt);
-  pattern = mt->pattern;
+  if ((d_name = basename(name)) == NULL)
+	return (-1);
+  
+  fmt = &(p->mt->fmt);
+  pattern = p->mt->pattern;
   plen = strlen(d_name);
   
   bzero(msg, LINE_MAX);
@@ -144,321 +323,319 @@ exec_regex(const char *d_name, match_t *mt)
 
   if (ret != 0 && ret != REG_NOMATCH) {
 	if (regerror(ret, fmt, msg, LINE_MAX) > 0) {
-	  warnx("%s: %s",
-			pattern, msg);
+	  errx(1, "%s: %s",
+		   pattern, msg);
 	} else {
-	  warn("%s", pattern);
+	  errx(1, "%s", pattern);
 	}
 	regfree(fmt);
 	return (-1);
   }
 
-#ifdef _DEBUG_
-  warnx("exec_regex: pattern=%s, name=%s",
-		pattern, d_name);
-#endif
-  
   matched = ((ret == 0) && (pmatch.rm_so == 0) && (pmatch.rm_eo == plen));
+  
+#ifdef _DEBUG_
+  warnx("exec_regex: pattern=%s, name=%s :%s MATCHED!",
+		pattern, d_name, ((matched == 0) ? "" : "NOT"));
+#endif
+
   return ((matched == 1) ? (0) : (-1));
 }
 
-void
-walk_through(const char *n_name, const char *d_name, plan_t *p)
+int
+s_name(const char *name, plan_t *p)
 {
   int matched;
-  unsigned int nents;
-  char *pbase, tmp_buf[MAXPATHLEN];
-  static struct dirent *dir;
-  DIR *dirp;
-  DLIST *dlist;
+  unsigned int plen, mflag;
+  char *pattern, *d_name;
 
-  if (n_name == NULL)
-	return;
-  if (d_name == NULL)
-	return;
+  if (name == NULL)
+	return (-1);
   if (p == NULL)
-	return;
-  if (p == NULL)
-	return;
-  if (p->stat == NULL)
-	return;
-    
-  if (get_type(n_name, p) == NT_ERROR) {
-	warn("%s", n_name);
-	return;
-  }
-
-  nents = 0;
-  dlist = dl_init();
-  
-  matched = cook_entry(n_name, d_name, p);
-
-  if (matched) {
-	if (!(p->flags & OPT_DEL))
-	  out(n_name);
-	else
-	  delete = 1;
-  }
-  
-  if (p->stat->type != NT_ISDIR) {
-	if (matched && delete)
-	  dislink(n_name, p->stat->type);
-	list_clear(&dlist);
-	return;
-  }
-
-  if (p->flags & OPT_XDEV) {
-	if (p->odev == 0)
-	  p->odev = p->stat->dev;
-	if (p->stat->dev != p->odev) {
-	  list_clear(&dlist);
-	  return;
-	}
-  }
-
-  if (NULL == (dirp = opendir(n_name))) {
-	warn("%s", n_name);
-	list_clear(&dlist);
-	return;
-  }
-
-  while (NULL != (dir = readdir(dirp))) {
-	
-	if ((0 == strncmp(dir->d_name, ".", strlen(dir->d_name) + 1)) ||
-		(0 == strncmp(dir->d_name, "..", strlen(dir->d_name) + 1))) {
-	  continue;
-	}
-	  
-	nents++;
-	bzero(tmp_buf, MAXPATHLEN);
-	strncpy(tmp_buf, n_name, MAXPATHLEN);
-	if ('/' != tmp_buf[strlen(tmp_buf) - 1])
-	  strncat(tmp_buf, "/", MAXPATHLEN);
-	strncat(tmp_buf, dir->d_name, MAXPATHLEN);
-	dl_append(tmp_buf, &dlist);
-  }
-
-  /* We have to count dir entries before */
-  /* we can tell if or not a directory is */
-  /* empty. If it's empty, then display it. */
-  if (p->flags & OPT_EMPTY) {
-	if (p->type == NT_ISDIR ||
-		p->type == NT_UNKNOWN ||
-		p->stat->type == p->type) {
-	  if (nents == 0) {
-		if (!(p->flags & OPT_DEL)) {
-		  out(n_name);
-		} else {
-		  dislink(n_name, p->stat->type);
-		}
-
-		list_clear(&dlist);
-		closedir(dirp);
-		return;
-	  }
-	}
-  }
-
-  /* Sort the search result if */
-  /* necessary. */
-  if (p->flags & OPT_SORT) {
-	dl_sort(&dlist);
-  }
-  
-  dlist->cur = dlist->head;
-  while (dlist->cur) {
-	if (dlist->cur->ent != NULL) {
-	  pbase = basename(dlist->cur->ent);
-	  walk_through(dlist->cur->ent, pbase, p);
-	}
-	dlist->cur = dlist->cur->next;
-  }
-  
-  closedir(dirp);
-  list_clear(&dlist);
-
-  if (matched && delete)
-	dislink(n_name, p->stat->type);
-
-  return;
-}
-
-static void
-out(const char *s)
-{
-  if (s == NULL)
-	return;
-  
-  (void)fprintf(stdout, "%s\n", s);
-}
-
-static node_t
-get_type(const char *d_name, plan_t *p)
-{
-  static struct stat stbuf;
-
-  if (d_name == NULL)
-	return (NT_ERROR);
-  if (p == NULL)
-	return (NT_ERROR);
-  if (p == NULL)
-	return (NT_ERROR);
-  if (p->stat == NULL)
-	return (NT_ERROR);
-  if (p->stat_func(d_name, &stbuf)  < 0 )
-	return (NT_ERROR);
-  
-  p->stat->gid = stbuf.st_gid;
-  p->stat->uid = stbuf.st_uid;
-  p->stat->dev = stbuf.st_dev;
-
-  if (S_ISBLK(stbuf.st_mode))
-	p->stat->type = NT_ISBLK;
-  if (S_ISCHR(stbuf.st_mode))
-	p->stat->type = NT_ISCHR;
-  if (S_ISDIR(stbuf.st_mode))
-	p->stat->type = NT_ISDIR;
-  if (S_ISFIFO(stbuf.st_mode))
-	p->stat->type = NT_ISFIFO;
-  if (S_ISLNK(stbuf.st_mode))
-	p->stat->type = NT_ISLNK;
-  if (S_ISREG(stbuf.st_mode))
-	p->stat->type = NT_ISREG;
-  if (S_ISSOCK(stbuf.st_mode))
-	p->stat->type = NT_ISSOCK;
-  
-  if (stbuf.st_size == 0)
-	p->stat->empty = 1;
-  else
-	p->stat->empty = 0;
-  
-  return (NT_UNKNOWN);
-}
-
-static int
-cook_entry(const char *n_name, const char *d_name, plan_t *p)
-{
-  unsigned int found;
-
-  found = 0;
-  
-  if ((0 == p->exec_func(d_name, p->mt)) &&
-	  ((p->type == NT_UNKNOWN) ||
-	   (p->type == p->stat->type))) {
-
-	found = 1;
-	
-	if (p->flags & OPT_EMPTY) {
-	  if (!(p->stat->empty))
-		found = 0;
-	}
-
-	if (p->flags & OPT_GRP) {
-	  if (0 != tell_group(p->group, p->stat->gid))
-		found = 0;
-	}
-	
-	if (p->flags & OPT_USR) {
-	  if (0 != tell_user(p->user, p->stat->uid))
-		found = 0;
-	}
-  }
-
-  return (found);
-}
-
-static int
-tell_group(const char *sgid, const gid_t gid)
-{
-  gid_t id;
-  char *p;
-  static struct group *grp;
-  
-  if (sgid == NULL)
+	return (-1);
+  if (p->mt == NULL)
 	return (-1);
 
-  if (gid < 0)
+  if ((d_name = basename(name)) == NULL)
 	return (-1);
-
-  id = strtol(sgid, &p, 0);
-  if (p[0] == '\0')
-	grp = getgrgid(id);
-  else
-	grp = getgrnam(p);
   
-  if (grp == NULL) {
-	errx(0, "--group: %s: no such group", sgid);
+  mflag = 0;
+  pattern = p->mt->pattern;
+  plen = strlen(pattern);
+  matched = FNM_NOMATCH;
+  
+  if (plen == 0)
+	pattern = "*";
+#ifdef _DEBUG_
+  else {
+	warnx("pattern=%s, plen=%d", pattern, plen);
+	}
+#endif 
+  if (p->mt->mflag & REG_ICASE) {
+	mflag = FNM_CASEFOLD | FNM_PERIOD | FNM_PATHNAME | FNM_NOESCAPE;
   }
-
-  if (grp->gr_gid == gid)
-	return (0);
   
-  return (-1);
-}
-
-static int
-tell_user(const char *suid, const uid_t uid)
-{
-  uid_t id;
-  char *p;
-  static struct passwd *pwd;
-
-  if (suid == NULL)
-	return (-1);
-
-  if (uid < 0)
-	return (-1);
-  
-  id = strtol(suid, &p, 0);
-  if (p[0] == '\0')
-	pwd = getpwuid(id);
-  else
-	pwd = getpwnam(p);
-  
-  if (pwd == NULL) {
-	errx(0, "--user: %s: no such user", suid);
-  }
-
-  if (pwd->pw_uid == uid)
-	return (0);
-  
-  return (-1);
-}
-
-static void
-dislink(const char *path, node_t type)
-{  
-  if (path == NULL)
-	return;
-  
-  if ((0 == strncmp(path, ".", strlen(path) + 1)) ||
-	  (0 == strncmp(path, "..", strlen(path) + 1)))
-	return;
+  matched = fnmatch(pattern, d_name, mflag);
   
 #ifdef _DEBUG_
-  warnx("dislink(%s): %s: to be deleted.", path, path);
+  warnx("exec_name: pattern=%s, name=%s :%s MATCHED!",
+		pattern, d_name, ((matched == 0) ? "" : "NOT"));
 #endif
+
+  return ((matched == 0) ? (0) : (-1));
+}
+
+int
+s_stat(const char *name, plan_t *p)
+{
+  if (name == NULL)
+	return (-1);
+  if (p == NULL)
+	return (-1);
+
+  return (nodestat(name, p, &stat));
+}
+
+int
+s_lstat(const char *name, plan_t *p)
+{
+  if (name == NULL)
+	return (-1);
+  if (p == NULL)
+	return (-1);
+
+  return (nodestat(name, p, &lstat));
+}
+
+int
+s_gid(const char *name __unused, plan_t *p)
+{
+  gid_t id;
+  char *s;
+  static struct group *grp;
+
+  if (p == NULL)
+	return (-1);
+  if (p->args == NULL)
+	return (-1);
+  if (p->nstat == NULL)
+	return (-1);
+
+  id = strtol(p->args->sgid, &s, 0);
+  if (s[0] == '\0')
+	grp = getgrgid(id);
+  else
+	grp = getgrnam(s);
   
-  if(type == NT_ISDIR) {
-	if (rmdir(path) < 0) {
-	  warn("--rmdir(%s)", path);
+  if (grp == NULL) {
+	errx(EX_NOUSER, "--group: %s: no such group", p->args->sgid);
+  } else if (grp->gr_gid != p->nstat->gid) {
+	return (-1);
+  }
+  
+  return (0);
+}
+
+int
+s_uid(const char *name __unused, plan_t *p)
+{
+  uid_t id;
+  char *s;
+  static struct passwd *pwd;
+
+  if (p == NULL)
+	return (-1);
+  if (p->args == NULL)
+	return (-1);
+  if (p->nstat == NULL)
+	return (-1);
+  
+  id = strtol(p->args->suid, &s, 0);
+  if (s[0] == '\0')
+	pwd = getpwuid(id);
+  else
+	pwd = getpwnam(s);
+  
+  if (pwd == NULL) {
+	errx(EX_NOUSER, "--user: %s: no such user", p->args->suid);
+  } else if (pwd->pw_uid != p->nstat->uid) {
+	return (-1);
+  }
+  
+  return (0);
+}
+
+int
+s_empty(const char *name __unused, plan_t *p)
+{
+  if (p == NULL)  
+	return (-1);
+  if (p->nstat == NULL)
+	return (-1);
+
+  if (p->nstat->empty)
+	return (0);
+
+  return (-1);
+}
+
+int
+s_xdev(const char *name, plan_t *p)
+{
+  if (p == NULL)
+	return (-1);
+  if (p->args == NULL)
+	return (-1);
+  if (p->nstat == NULL)
+	return (-1);
+
+  if (p->args->odev == 0)
+	p->args->odev = p->nstat->dev;
+  if (p->nstat->dev != p->args->odev) {
+	if (p->nstat->type == NT_ISDIR) {
+	  out(name);
 	}
+	return (-1);
+  }
+
+  return (0);
+}
+
+int
+s_sort(const char *name __unused, plan_t *p) {
+
+  if (p == NULL)
+	return (-1);
+  if (p->paths == NULL)
+	return (-1);
+
+  dl_sort(p->paths);
+  return (0);
+}
+
+int
+s_delete(const char *name, plan_t *p)
+{
+  if (name == NULL)
+	return (-1);
+  if (p == NULL)
+	return (-1);
+  if (p->plans == NULL)
+	return (-1);
+
+  if (p->plans->retval != 0) {
+	return (-1);
+  }
+
+  if ((0 == strncmp(name, ".", strlen(name) + 1)) ||
+      (0 == strncmp(name, "..", strlen(name) + 1))) {
+	return (-1);
+  }
+
+  if (p->nstat->type == NT_ISDIR) {
+	dl_append(name, p->rdirs);
+#ifdef _DEBUG_	
+	warnx("directory: `%s' to be deleted", name);
+#endif	
   } else {
-	if (unlink(path) < 0) {
-	  warn("--unlink(%s)", path);
+    dl_append(name, p->rfiles);
+#ifdef _DEBUG_	
+	warnx("file: `%s' to be deleted", name);
+#endif	
+  }
+
+  return (0);
+}
+
+int
+s_path(const char *name , plan_t *p)
+{
+  DLIST *paths;
+  DLIST *rfiles, *rdirs;
+  
+  if (p == NULL) {
+	return (-1);
+  }
+
+  paths = p->paths;
+  rfiles = p->rfiles;
+  rdirs = p->rdirs;
+  
+  if (paths == NULL ||
+	  dl_empty(paths))
+	return (-1);
+  
+  for (paths->cur = paths->head; paths->cur != NULL; paths->cur = paths->cur->next) {
+	walk_through(paths->cur->ent, p);
+  }
+  /*  --- delete files ---
+   *  must be here. because we have to wait for
+   *  walk_through() to terminate.
+   */
+  if (rfiles) {
+	for (rfiles->cur = rfiles->tail; rfiles->cur != NULL; rfiles->cur = rfiles->cur->pre) {
+	  /* to delete files, we have no need to specify its file type */
+#ifdef _DEBUG_
+	  warnx("%s deleted!", rfiles->cur->ent);
+#endif	  
+	  dislink(rfiles->cur->ent, NT_UNKNOWN);
 	}
   }
+
+  /* delete dirs */
+  if (rdirs) {
+	for (rdirs->cur = rdirs->tail; rdirs->cur != NULL; rdirs->cur = rdirs->cur->pre) {
+#ifdef _DEBUG_		
+	  warnx("%s deleted!", rdirs->cur->ent);
+#endif		
+	  dislink(rdirs->cur->ent, NT_ISDIR);
+	}
+  }
+
+  return (0);
 }
 
-static void
-list_clear(DLIST **list)
+int
+s_type(const char *s __unused, plan_t *p)
 {
-  DLIST *listp = *list;
-  
-  if (listp == NULL)
-	return;
-
-  dl_free(&listp);
-  listp = NULL;
+  if (p == NULL ||
+	  p->args == NULL ||
+	  p->nstat == NULL)
+	return (-1);
+#ifdef _DEBUG_
+  warnx("want: %d, actual: %d\n",
+		p->args->type, p->nstat->type);
+#endif
+  return ((p->args->type == p->nstat->type) ? (0) : (-1));
 }
 
+int
+s_usage(const char *s __unused, plan_t *p __unused)
+{  
+  static const char *usage = "usage:\t%s [-EILPsxv]\
+ ...\
+ [-f|--path ...]\
+ [-n|--name ...]\
+ [-r|--regex ...]\
+ [-t|--type ...]\
+ [...]\n\
+ \t%s [-EILPsxv]\
+ -f|--path ...\
+ [...]\
+ [-n|--name ...]\
+ [-r|--regex ...]\
+ [-t|--type ...]\
+ [...]\n";
+
+  (void)fprintf(stderr,	usage,
+				SEARCH_NAME, SEARCH_NAME);
+  return (0);
+}
+
+int
+s_version(const char *s __unused, plan_t *p __unused)
+{  
+  (void)fprintf(stderr,	"%s version %s\n",
+				SEARCH_NAME, SEARCH_VERSION);
+  return (0);
+}

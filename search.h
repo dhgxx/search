@@ -1,8 +1,6 @@
-#ifndef _SEARCH_H_
-#define _SEARCH_H_
-
 /*
- * Copyright (c) 2005-2010 Denise H. G. All rights reserved
+ * Copyright (c) 2005-2010 Denise H. G. <darcsis@gmail.com>
+ * All rights reserved
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,36 +25,48 @@
  *
  */
 
-#include <sys/param.h>
+#ifndef _SEARCH_H_
+#define _SEARCH_H_
+
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/param.h>
 
-#include <stdio.h>
 #include <dirent.h>
-#include <string.h>
-#include <stdlib.h>
 #include <err.h>
 #include <errno.h>
-#include <unistd.h>
+#include <fnmatch.h>
 #include <limits.h>
+#include <locale.h>
 #include <regex.h>
 #include <signal.h>
-#include <fnmatch.h>
-#include <locale.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
 #include <dlist.h>
 
 #define SEARCH_NAME "search"
-#define SEARCH_VERSION "0.4"
+#define SEARCH_VERSION "0.6"
 
-#define OPT_NONE  0x0000
-#define OPT_EMPTY 0x0002
-#define OPT_GRP   0x0004
-#define OPT_USR   0x0008
-#define OPT_XDEV  0x0020
-#define OPT_DEL   0x0040
-#define OPT_SORT  0x0080
+#define OPT_NONE    0x000000
+#define OPT_EMPTY   0x000002
+#define OPT_GRP     0x000004
+#define OPT_USR     0x000008
+#define OPT_XDEV    0x000020
+#define OPT_DEL     0x000040
+#define OPT_SORT    0x000080
+#define OPT_STAT    0x000200
+#define OPT_LSTAT   0x000400
+#define OPT_NAME    0x000800
+#define OPT_REGEX   0x002000
+#define OPT_PATH    0x004000
+#define OPT_TYPE    0x008000
+#define OPT_VERSION 0x020000
+#define OPT_USAGE   0x040000
 
-typedef enum _node_t {
+typedef enum _node {
   NT_UNKNOWN = DT_UNKNOWN,
   NT_ISFIFO = DT_FIFO,
   NT_ISCHR = DT_CHR,
@@ -66,7 +76,7 @@ typedef enum _node_t {
   NT_ISLNK = DT_LNK,
   NT_ISSOCK = DT_SOCK,
   NT_ERROR = -1
-} node_t;
+} NODE;
 
 typedef struct _match_t {
   regex_t fmt;
@@ -74,25 +84,53 @@ typedef struct _match_t {
   unsigned int mflag;
 } match_t;
 
-typedef struct _node_stat_t {
-  node_t type;
-  unsigned int empty;
+typedef struct _nstat_t {
+  NODE type;
   uid_t uid;
   gid_t gid;
   dev_t dev;
-} node_stat_t;
+  unsigned int empty;
+  unsigned int flink;
+  unsigned int mtype;
+} nstat_t;
+
+typedef struct _args_t {
+  NODE type;
+  char suid[LINE_MAX];
+  char sgid[LINE_MAX];
+  dev_t odev;
+  unsigned int empty;
+} args_t;
+
+typedef struct _plist_t {
+  int retval;
+  struct _plan *start;
+  struct _plan *cur;
+  unsigned int size;
+} plist_t;
 
 typedef struct _plan_t {
-  unsigned flags;
-  char user[LINE_MAX];
-  char group[LINE_MAX];
+  unsigned int flags;
+  struct _match_t *mt;
+  struct _args_t *args;
+  struct _plist_t *plans;
+  struct _nstat_t *nstat;
   DLIST *paths;
-  node_t type;
-  node_stat_t *stat;
-  match_t *mt;
-  dev_t odev;
-  int (*stat_func)(const char *, struct stat *);
-  int (*exec_func)(const char *, struct _match_t *);
+  /* files to be deleted */
+  DLIST *rfiles;
+  /* dirs to be deleted */
+  DLIST *rdirs;
 } plan_t;
+
+typedef struct _plan {
+  int (*s_func) (const char *, struct _plan_t *);
+  struct _plan *next;
+} PLAN;
+
+typedef struct flags_t {
+  unsigned int opt;
+  int (*s_func) (const char *, struct _plan_t *);
+  const char *name;
+} FLAGS;
 
 #endif	/* _SEARCH_H_ */

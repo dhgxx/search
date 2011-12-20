@@ -18,35 +18,47 @@ OPT_LIB=		-L${OPT_LIBDIR} -lmi
 
 PROG=			search
 MAN=			${PROG}.1
-SRCS=			functions.c options.c search.c
-HDRS=			extern.h search.h
-OBJS=			functions.o options.o search.o
-
-.if defined(CFLAGS)
-MYCFLAGS=		${CFLAGS} -D_${OSNAME}_
-.else
-MYCFLAGS=		-O2 -pipe -D_{OSNAME}_
-.endif
-
-.if defined(DEBUG)
-STRIP=
-MYCFLAGS+=		-ggdb -D_DEBUG_
-.else
-STRIP=			-s
-.endif
+SRCS=			functions.c plan.c search.c
+HDRS=			search.h
+OBJS=			functions.o plan.o search.o
 
 .if ${OSNAME} == "FreeBSD"
-CC=			clang
+.if exists(/usr/bin/clang)
+CC=				clang
+.else
+CC=				cc
+.endif
 BINGRP=			wheel
 MFILE=			${MAN}.gz
 MANDIR=			${OPT_MANDIR}/man1
 MKWHATIS=		/usr/bin/makewhatis
 .elif ${OSNAME} == "OpenBSD"
-CC=			cc
+CC=				cc
 BINGRP=			bin
 MFILE=			${MAN:S/.1$/.cat0/g}
 MANDIR=			${OPT_MANDIR}/cat1
 MKWHATIS=		/usr/libexec/makewhatis
+.endif
+
+.if defined(CFLAGS)
+MYCFLAGS=		-D_${OSNAME}_ ${CFLAGS}
+.else
+MYCFLAGS=		-D_${OSNAME}_ -O2 -pipe -fno-strict-aliasing
+.endif
+
+.if defined(DEBUG)
+STRIP=
+MYCFLAGS+=		-D_DEBUG_
+.if defined(CC) && ${CC} == "clang"
+MYCFLAGS=		-O0 -pipe -D_DEBUG_
+DEBUG_FLAGS=		-g
+.else
+MYCFLAGS=		-O -pipe -D_DEBUG_
+DEBUG_FLAGS=		-ggdb
+.endif
+.else
+STRIP=			-s
+DEBUG_FLAGS=
 .endif
 
 .if ${INSTALL_USER} == "root"
@@ -63,7 +75,7 @@ sys-install: install-bin install-man
 
 ${OBJS}: ${SRCS} ${HDRS}
 .for i in ${SRCS}
-	${CC} ${MYCFLAGS} ${OPT_INC} -c $i
+	${CC} ${MYCFLAGS} ${OPT_INC} ${DEBUG_FLAGS} -c $i
 .endfor
 
 ${PROG}: ${SRCS} ${HDRS}
