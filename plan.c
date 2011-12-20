@@ -167,11 +167,11 @@ free_plan(plist_t **plist)
 #endif
   
   while (pl->cur != NULL) {
+#ifdef _DEBUG_
+	warnx("freed plan (%d): %s", i, pl->cur->func_name);
+#endif
 	tmp = pl->cur;
 	pl->cur = pl->cur->next;
-#ifdef _DEBUG_
-	warnx("free plan (%d)", i);
-#endif
 	tmp->s_func = NULL;
 	free(tmp);
 	tmp = NULL;
@@ -202,6 +202,7 @@ plan_add(unsigned int *fl, plist_t *pl)
 	  
 	  new->next = NULL;
 	  new->s_func = flags[i].s_func;
+	  new->func_name = (char *)flags[i].name;
 	  new->exec = flags[i].exec;
 	  
 	  if (pl->start == NULL) {
@@ -219,7 +220,7 @@ plan_add(unsigned int *fl, plist_t *pl)
 	  }
 
 #ifdef _DEBUG_
-	  warnx("added plan(%d): %s", pl->size, flags[i].name);
+	  warnx("added plan(%d): %s", i, flags[i].name);
 #endif
 
 	  *fl &= ~(flags[i].opt);
@@ -242,7 +243,7 @@ plan_execute(plan_t *p)
   if ((p->plans->cur = p->plans->start) == NULL)
 	return (-1);
 
-  while (p->plans->cur != NULL) {
+  while (p->plans->cur != NULL && p->plans->cur->exec != 1) {
 	p->plans->retval = p->plans->cur->s_func(NULL, p);
 	if (p->plans->cur)
 	  p->plans->cur = p->plans->cur->next;

@@ -48,7 +48,7 @@
 #include <mi/dlist.h>
 
 #define SEARCH_NAME "search"
-#define SEARCH_VERSION "0.6"
+#define SEARCH_VERSION "0.6.1"
 
 #define OPT_NONE    0x000000
 #define OPT_EMPTY   0x000002
@@ -124,6 +124,7 @@ typedef struct _plan_t {
 
 typedef struct _plan {
   unsigned int exec;
+  char *func_name;
   int (*s_func) (const char *, struct _plan_t *);
   struct _plan *next;
 } PLAN;

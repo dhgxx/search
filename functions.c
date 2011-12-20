@@ -237,11 +237,6 @@ walk_through(const char *name, plan_t *p)
 	  }
 	}
 
-	/* we do not want to display names for files/dirs to be deleted! */
-	if (pl->cur->s_func == &s_delete) {
-	  retval = -1;
-	}
-	
 	if (pl->cur)
 	  pl->cur = pl->cur->next;
   }
@@ -550,58 +545,58 @@ s_delete(const char *name, plan_t *p)
 	warnx("file: `%s' to be deleted", name);
 #endif	
   }
-
-  return (0);
+  /* upon -1, the results will not be printed out */
+  return (-1);
 }
 
 int
 s_path(const char *name __unused, plan_t *p)
-{
-  DLIST *paths;
-  DLIST *rfiles, *rdirs;
-  
+{  
   if (p == NULL) {
 	return (-1);
   }
-
-  paths = p->paths;
-  rfiles = p->rfiles;
-  rdirs = p->rdirs;
   
-  if (paths == NULL ||
-	  dl_empty(paths))
+  if (p->paths == NULL ||
+	  dl_empty(p->paths))
 	return (-1);
  
-  paths->cur = paths->head; 
-  while (paths->cur != NULL) {
+  p->paths->cur = p->paths->head; 
+  while (p->paths->cur != NULL) {
 #ifdef _DEBUG_
-	warnx("walking through: %s", paths->cur->ent);
+	warnx("walking through: %s", p->paths->cur->ent);
 #endif
-	walk_through(paths->cur->ent, p);
-	if (paths->cur)
-	  paths->cur = paths->cur->next;
+	walk_through(p->paths->cur->ent, p);
+	if (p->paths->cur)
+	  p->paths->cur = p->paths->cur->next;
   }
-  /*  --- delete files ---
-   *  must be here. because we have to wait for
-   *  walk_through() to terminate.
-   */
-  if (rfiles) {
-	for (rfiles->cur = rfiles->tail; rfiles->cur != NULL; rfiles->cur = rfiles->cur->pre) {
-	  /* to delete files, we have no need to specify its file type */
+  
+ /*  --- delete files ---
+  *  must be here. because we have to wait for
+  *  walk_through() to terminate.
+  */
+  if (p->rfiles && !dl_empty(p->rfiles)) {
+	p->rfiles->cur = p->rfiles->head;
+	while (p->rfiles->cur != NULL) {
 #ifdef _DEBUG_
-	  warnx("%s deleted!", rfiles->cur->ent);
-#endif	  
-	  dislink(rfiles->cur->ent, NT_UNKNOWN);
+	  warnx("%s deleted!", p->rfiles->cur->ent);
+#endif
+	  /* to delete files, we have no need to specify its file type */
+	  dislink(p->rfiles->cur->ent, NT_UNKNOWN);
+	  if (p->rfiles->cur)
+		p->rfiles->cur = p->rfiles->cur->next;
 	}
   }
 
   /* delete dirs */
-  if (rdirs) {
-	for (rdirs->cur = rdirs->tail; rdirs->cur != NULL; rdirs->cur = rdirs->cur->pre) {
+  if (p->rdirs) {
+	p->rdirs->cur = p->rdirs->head;
+	while (p->rdirs->cur != NULL) {
 #ifdef _DEBUG_		
-	  warnx("%s deleted!", rdirs->cur->ent);
-#endif		
-	  dislink(rdirs->cur->ent, NT_ISDIR);
+	  warnx("%s deleted!", p->rdirs->cur->ent);
+#endif
+	  dislink(p->rdirs->cur->ent, NT_ISDIR);
+	  if (p->rdirs->cur)
+		p->rdirs->cur = p->rdirs->cur->next;
 	}
   }
 
