@@ -45,7 +45,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <dlist.h>
+#include <mi/dlist.h>
 
 #define SEARCH_NAME "search"
 #define SEARCH_VERSION "0.6"
@@ -123,6 +123,7 @@ typedef struct _plan_t {
 } plan_t;
 
 typedef struct _plan {
+  unsigned int exec;
   int (*s_func) (const char *, struct _plan_t *);
   struct _plan *next;
 } PLAN;
@@ -131,6 +132,7 @@ typedef struct flags_t {
   unsigned int opt;
   int (*s_func) (const char *, struct _plan_t *);
   const char *name;
+  const unsigned int exec;
 } FLAGS;
 
 #endif	/* _SEARCH_H_ */

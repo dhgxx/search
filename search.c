@@ -66,7 +66,7 @@ plan_t plan;
 int
 main(int argc, char *argv[])
 {
-  int i, ch;
+  int ch;
   int ret;
     
   (void)setlocale(LC_CTYPE, "");
@@ -268,6 +268,8 @@ cleanup(int sig)
 	plan.nstat = NULL;
   }
   
-  if (sig)
+  if (sig) {
+	(void)fprintf(stderr, "\n");
 	exit(0);
+  }
 }

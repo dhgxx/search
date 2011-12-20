@@ -212,15 +212,16 @@ walk_through(const char *name, plan_t *p)
   need_sort = 0;
   
   pl = p->plans;
-  
-  for (pl->cur = pl->start; pl->cur != NULL; pl->cur = pl->cur->next) {
+
+  pl->cur = pl->start;
+  while (pl->cur != NULL) {
 	
 	if (pl->cur->s_func == &s_sort) {
 	  need_sort = 1;
 	}
 
 	/* bypass s_path() */
-	if (pl->cur->s_func != &s_path) {
+	if (pl->cur->exec == 1) {
 	  pl->retval = (retval |= pl->cur->s_func(name, p));
 	}
 	
@@ -239,7 +240,10 @@ walk_through(const char *name, plan_t *p)
 	/* we do not want to display names for files/dirs to be deleted! */
 	if (pl->cur->s_func == &s_delete) {
 	  retval = -1;
-	}	
+	}
+	
+	if (pl->cur)
+	  pl->cur = pl->cur->next;
   }
   
   if (retval == 0) {
@@ -280,9 +284,12 @@ walk_through(const char *name, plan_t *p)
   if (need_sort) {
 	dl_sort(paths);
   }
-  
-  for (paths->cur = paths->head; paths->cur != NULL; paths->cur = paths->cur->next) {
+
+  paths->cur = paths->head;
+  while (paths->cur != NULL) {
 	walk_through(paths->cur->ent, p);
+	if (paths->cur)
+	  paths->cur = paths->cur->next;
   }
   
   dl_free(paths);
@@ -548,7 +555,7 @@ s_delete(const char *name, plan_t *p)
 }
 
 int
-s_path(const char *name , plan_t *p)
+s_path(const char *name __unused, plan_t *p)
 {
   DLIST *paths;
   DLIST *rfiles, *rdirs;
@@ -564,9 +571,15 @@ s_path(const char *name , plan_t *p)
   if (paths == NULL ||
 	  dl_empty(paths))
 	return (-1);
-  
-  for (paths->cur = paths->head; paths->cur != NULL; paths->cur = paths->cur->next) {
+ 
+  paths->cur = paths->head; 
+  while (paths->cur != NULL) {
+#ifdef _DEBUG_
+	warnx("walking through: %s", paths->cur->ent);
+#endif
 	walk_through(paths->cur->ent, p);
+	if (paths->cur)
+	  paths->cur = paths->cur->next;
   }
   /*  --- delete files ---
    *  must be here. because we have to wait for

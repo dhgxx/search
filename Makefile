@@ -41,19 +41,19 @@ MKWHATIS=		/usr/libexec/makewhatis
 .endif
 
 .if defined(CFLAGS)
-MYCFLAGS=		-D_${OSNAME}_ ${CFLAGS}
+MYCFLAGS=		-D_${OSNAME}_ ${CFLAGS} -Wall
 .else
-MYCFLAGS=		-D_${OSNAME}_ -O2 -pipe -fno-strict-aliasing
+MYCFLAGS=		-D_${OSNAME}_ -O2 -pipe -fno-strict-aliasing -Wall
 .endif
 
 .if defined(DEBUG)
 STRIP=
 MYCFLAGS+=		-D_DEBUG_
 .if defined(CC) && ${CC} == "clang"
-MYCFLAGS=		-O0 -pipe -D_DEBUG_
+MYCFLAGS=		-O0 -pipe -D_DEBUG_ -Wall
 DEBUG_FLAGS=		-g
 .else
-MYCFLAGS=		-O -pipe -D_DEBUG_
+MYCFLAGS=		-O -pipe -D_DEBUG_ -Wall
 DEBUG_FLAGS=		-ggdb
 .endif
 .else

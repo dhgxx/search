@@ -44,22 +44,22 @@ extern int s_usage(const char *, plan_t *);
 
 static const FLAGS flags[] = {
   /* ===== order start ===== */
-  { OPT_VERSION, &s_version, "version" },
-  { OPT_USAGE,   &s_usage,   "usage" },
-  { OPT_SORT,    &s_sort,    "sort" },
-  { OPT_PATH,    &s_path,    "path" },
-  { OPT_STAT,    &s_stat,    "stat" },
-  { OPT_LSTAT,   &s_lstat,   "lstat" },
+  { OPT_VERSION, &s_version, "version", 0 },
+  { OPT_USAGE,   &s_usage,   "usage",   0 },
+  { OPT_SORT,    &s_sort,    "sort",    0 },
+  { OPT_PATH,    &s_path,    "path",    0 },
+  { OPT_STAT,    &s_stat,    "stat",    1 },
+  { OPT_LSTAT,   &s_lstat,   "lstat",   1 },
   /* ===== order end ===== */
-  { OPT_EMPTY,   &s_empty,   "empty" },
-  { OPT_GRP,     &s_gid,     "gid" },
-  { OPT_USR,     &s_uid,     "uid" },
-  { OPT_NAME,    &s_name,    "name" },
-  { OPT_REGEX,   &s_regex,   "regex" },
-  { OPT_TYPE,    &s_type,    "type" },
+  { OPT_EMPTY,   &s_empty,   "empty",   1 },
+  { OPT_GRP,     &s_gid,     "gid",     1 },
+  { OPT_USR,     &s_uid,     "uid",     1 },
+  { OPT_NAME,    &s_name,    "name",    1 },
+  { OPT_REGEX,   &s_regex,   "regex",   1 },
+  { OPT_TYPE,    &s_type,    "type",    1 },
   /* ===== order start ===== */
-  { OPT_XDEV,    &s_xdev,    "xdev" },
-  { OPT_DEL,     &s_delete,  "delete" },
+  { OPT_XDEV,    &s_xdev,    "xdev",    1 },
+  { OPT_DEL,     &s_delete,  "delete",  1 },
   /* ===== order end ===== */
   { OPT_NONE,    NULL,        NULL },
 };
@@ -139,8 +139,6 @@ add_plan(plan_t *p)
 int
 execute_plan(plan_t *p)
 {
-  int ret;
-
   if (p == NULL)
 	return (-1);
 
@@ -204,6 +202,7 @@ plan_add(unsigned int *fl, plist_t *pl)
 	  
 	  new->next = NULL;
 	  new->s_func = flags[i].s_func;
+	  new->exec = flags[i].exec;
 	  
 	  if (pl->start == NULL) {
 		pl->cur = pl->start = new;
