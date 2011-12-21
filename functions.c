@@ -180,8 +180,8 @@ nodestat(const char *name, plan_t *p,
 {
   int ret;
   static struct stat stbuf;
-  DIR *dirp;
-  struct dirent *dir;
+  static DIR *dirp;
+  static struct dirent *dir;
 
   if (name == NULL)
 	return (NT_ERROR);
@@ -244,7 +244,7 @@ walk_through(const char *name, plan_t *p)
   int retval, need_sort;
   char tmp_buf[MAXPATHLEN];
   static struct dirent *dir;
-  DIR *dirp;
+  static DIR *dirp;
   DLIST *paths;
   plist_t *pl;
 
@@ -321,9 +321,9 @@ walk_through(const char *name, plan_t *p)
 
 	dl_append(tmp_buf, paths);
   }
-  
-  closedir(dirp);
 
+  closedir(dirp);
+  
   if (need_sort) {
 	dl_sort(paths);
   }
@@ -344,7 +344,7 @@ int
 s_regex(const char *name, plan_t *p)
 {
   int ret, plen, matched;
-  char *pattern, *d_name, msg[LINE_MAX];
+  static char *pattern, *d_name, msg[LINE_MAX];
   static regex_t *fmt;
   regmatch_t pmatch;
 
@@ -370,9 +370,6 @@ s_regex(const char *name, plan_t *p)
   matched = 0;
 
   ret = regexec(fmt, d_name, 1, &pmatch, REG_STARTEND);
-  regfree(fmt);
-  free(d_name);
-  d_name = NULL;
 
   if (ret != 0 && ret != REG_NOMATCH) {
 	if (regerror(ret, fmt, msg, LINE_MAX) > 0) {
@@ -390,6 +387,9 @@ s_regex(const char *name, plan_t *p)
   warnx("exec_regex: pattern=%s, name=%s :%s MATCHED!",
 		pattern, d_name, ((matched == 0) ? "" : "NOT"));
 #endif
+
+  if (fmt)
+	regfree(fmt);
 
   return ((matched == 1) ? (0) : (-1));
 }
@@ -433,9 +433,6 @@ s_name(const char *name, plan_t *p)
   warnx("name: pattern=%s, name=%s :%s MATCHED!",
 		pattern, d_name, ((matched == 0) ? "" : "NOT"));
 #endif
-
-  free(d_name);
-  d_name = NULL;
 
   return ((matched == 0) ? (0) : (-1));
 }
