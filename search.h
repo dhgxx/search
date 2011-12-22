@@ -103,6 +103,8 @@ typedef struct _args_t {
   char sgid[LINE_MAX];
   dev_t odev;
   unsigned int empty;
+  unsigned int need_sort;
+  unsigned int need_xdev;
 } args_t;
 
 typedef struct _plist_t {

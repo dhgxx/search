@@ -140,12 +140,14 @@ main(int argc, char *argv[])
 	  break;
 	case 's':
 	  plan.flags |= OPT_SORT;
+      plan.args->need_sort = 1;
 	  break;
 	case 'v':
 	  plan.flags |= OPT_VERSION;
 	  break;
 	case 'x':
 	  plan.flags |= OPT_XDEV;
+      plan.args->need_xdev = 1;
 	  break;
 	case 't':
 	  plan.flags |= OPT_TYPE;

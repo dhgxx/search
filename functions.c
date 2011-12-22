@@ -139,8 +139,8 @@ regexcomp(match_t *mt)
 {
   int ret;
   unsigned int plen, mflag;
-  char msg[LINE_MAX];
-  char *pattern;
+  static char msg[LINE_MAX];
+  static char *pattern;
   static regex_t *fmt;
 
   if (mt == NULL)
@@ -159,7 +159,6 @@ regexcomp(match_t *mt)
 	pattern = mt->pattern;
 
   ret = regcomp(fmt, pattern, mflag);
-  regfree(fmt);
 
   if (ret != 0) {
 	if (regerror(ret, fmt, msg, LINE_MAX) > 0) {
@@ -168,10 +167,16 @@ regexcomp(match_t *mt)
 	} else {
 	  errx(EX_DATAERR, "-r %s", pattern);
 	}
-	//regfree(fmt);
-	return (-1);
+	if (fmt) {
+	  regfree(fmt);
+	  fmt = NULL;
+	}
   }
-  return (0);
+  
+  if (ret == 0)
+	return (0);
+  else
+	return (-1);
 }
 
 static int
@@ -241,7 +246,7 @@ nodestat(const char *name, plan_t *p,
 static void
 walk_through(const char *name, plan_t *p)
 {
-  int retval, need_sort;
+  int retval;
   char tmp_buf[MAXPATHLEN];
   static struct dirent *dir;
   static DIR *dirp;
@@ -258,16 +263,11 @@ walk_through(const char *name, plan_t *p)
 	return;
 
   retval = 0;
-  need_sort = 0;
   
   pl = p->plans;
 
   pl->cur = pl->start;
   while (pl->cur != NULL) {
-	
-	if (pl->cur->s_func == &s_sort) {
-	  need_sort = 1;
-	}
 
 	/* bypass s_path() */
 	if (pl->cur->exec == 1) {
@@ -277,16 +277,16 @@ walk_through(const char *name, plan_t *p)
 #endif
 	}
 
-	if (pl->cur->s_func == &s_xdev) {
-	  if (retval != 0) {
-		dl_free(paths);
-		paths = NULL;
-		return;
-	  }
-	}
-
 	if (pl->cur)
 	  pl->cur = pl->cur->next;
+  }
+
+  if (p->args->need_xdev) {
+	if (retval != 0) {
+	  dl_free(paths);
+	  paths = NULL;
+	  return;
+	}
   }
   
   if (retval == 0) {
@@ -324,7 +324,7 @@ walk_through(const char *name, plan_t *p)
 
   closedir(dirp);
   
-  if (need_sort) {
+  if (p->args->need_sort) {
 	dl_sort(paths);
   }
 
@@ -346,7 +346,7 @@ s_regex(const char *name, plan_t *p)
   int ret, plen, matched;
   static char *pattern, *d_name, msg[LINE_MAX];
   static regex_t *fmt;
-  regmatch_t pmatch;
+  static regmatch_t pmatch;
 
   if (name == NULL)
 	return (-1);
@@ -378,19 +378,21 @@ s_regex(const char *name, plan_t *p)
 	} else {
 	  errx(1, "%s", pattern);
 	}
-	return (-1);
-  }
+  } else {
 
-  matched = ((ret == 0) && (pmatch.rm_so == 0) && (pmatch.rm_eo == plen));
+	matched = ((ret == 0) && (pmatch.rm_so == 0) && (pmatch.rm_eo == plen));
   
 #ifdef _DEBUG_
-  warnx("exec_regex: pattern=%s, name=%s :%s MATCHED!",
-		pattern, d_name, ((matched == 0) ? "" : "NOT"));
+	warnx("exec_regex: pattern=%s, name=%s :%s MATCHED!",
+		  pattern, d_name, ((matched == 0) ? "" : "NOT"));
 #endif
-
-  if (fmt)
+  }
+  
+  if (fmt) {
 	regfree(fmt);
-
+	fmt = NULL;
+  }
+  
   return ((matched == 1) ? (0) : (-1));
 }
 
@@ -422,7 +424,8 @@ s_name(const char *name, plan_t *p)
   else {
 	warnx("pattern=%s, plen=%d", pattern, plen);
 	}
-#endif 
+#endif
+  
   if (p->mt->mflag & REG_ICASE) {
 	mflag = FNM_CASEFOLD | FNM_PERIOD | FNM_PATHNAME | FNM_NOESCAPE;
   }
