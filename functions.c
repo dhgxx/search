@@ -82,7 +82,7 @@ s_getids(const char *name __unused, plan_t *p __unused)
   errno = 0;
   
   for (i = 0; i < NIDS; i++) {
-	ids.uids[i] = ids.gids[i ] = -1;
+	ids.uids[i] = ids.gids[i] = -1;
   }
 
   i = 0;
