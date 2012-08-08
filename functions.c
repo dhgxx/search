@@ -628,7 +628,8 @@ s_path(const char *name __unused, plan_t *p)
   *  walk_through() to terminate.
   */
   if (p->rfiles && !dl_empty(p->rfiles)) {
-	p->rfiles->cur = p->rfiles->head;
+//	p->rfiles->cur = p->rfiles->head;
+	p->rfiles->cur = p->rfiles->tail;
 	while (p->rfiles->cur != NULL) {
 #ifdef _DEBUG_
 	  warnx("%s deleted!", p->rfiles->cur->ent);
@@ -636,20 +637,23 @@ s_path(const char *name __unused, plan_t *p)
 	  /* to delete files, we have no need to specify its file type */
 	  dislink(p->rfiles->cur->ent, NT_UNKNOWN);
 	  if (p->rfiles->cur)
-		p->rfiles->cur = p->rfiles->cur->next;
+//		p->rfiles->cur = p->rfiles->cur->next;
+		p->rfiles->cur = p->rfiles->cur->pre;
 	}
   }
 
   /* delete dirs */
   if (p->rdirs) {
-	p->rdirs->cur = p->rdirs->head;
+//	p->rdirs->cur = p->rdirs->head;
+	p->rdirs->cur = p->rdirs->tail;
 	while (p->rdirs->cur != NULL) {
 #ifdef _DEBUG_		
 	  warnx("%s deleted!", p->rdirs->cur->ent);
 #endif
 	  dislink(p->rdirs->cur->ent, NT_ISDIR);
 	  if (p->rdirs->cur)
-		p->rdirs->cur = p->rdirs->cur->next;
+//		p->rdirs->cur = p->rdirs->cur->next;
+		p->rdirs->cur = p->rdirs->cur->pre;
 	}
   }
 
