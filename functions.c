@@ -250,7 +250,7 @@ walk_through(const char *name, plan_t *p)
   char tmp_buf[MAXPATHLEN];
   static struct dirent *dir;
   static DIR *dirp;
-  DLIST *paths;
+  struct dlist *paths;
   plist_t *pl;
 
   if (name == NULL ||

@@ -109,7 +109,8 @@ init_plan(plan_t *p)
 int
 find_plan(int argc, char **argv, plan_t *p)
 {
-  int i, ret;
+  int i;
+  int ret = 0;
   
   if (argv == NULL || p == NULL)
 	return (-1);

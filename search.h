@@ -120,11 +120,11 @@ typedef struct _plan_t {
   struct _args_t *args;
   struct _plist_t *plans;
   struct _nstat_t *nstat;
-  DLIST *paths;
+  struct dlist *paths;
   /* files to be deleted */
-  DLIST *rfiles;
+  struct dlist *rfiles;
   /* dirs to be deleted */
-  DLIST *rdirs;
+  struct dlist *rdirs;
 } plan_t;
 
 typedef struct _plan {

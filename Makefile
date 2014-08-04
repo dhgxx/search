@@ -6,8 +6,8 @@ OSNAME=			${OSTYPE}
 OSNAME!=		uname -s
 .endif
 
-INSTALL_USER!=		id -n -u
-OPT_DESTDIR=		/opt/local
+INSTALL_USER!=	id -n -u
+OPT_DESTDIR=	/opt/local
 OPT_BINDIR=		${OPT_DESTDIR}/bin
 OPT_INCDIR=		${OPT_DESTDIR}/include
 OPT_LIBDIR=		${OPT_DESTDIR}/lib
@@ -23,11 +23,7 @@ HDRS=			search.h
 OBJS=			functions.o plan.o search.o
 
 .if ${OSNAME} == "FreeBSD"
-.if exists(/usr/bin/clang)
-CC=				clang
-.else
 CC=				cc
-.endif
 BINGRP=			wheel
 MFILE=			${MAN}.gz
 MANDIR=			${OPT_MANDIR}/man1
