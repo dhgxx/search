@@ -222,7 +222,8 @@ nodestat(const char *name, plan_t *p,
   if (S_ISSOCK(stbuf.st_mode))
 	p->nstat->type = NT_ISSOCK;
 
-  if (p->nstat->type != NT_ISDIR) {
+  if (p->nstat->type != NT_ISDIR &&
+      p->nstat->type == NT_ISREG) {
 	if (stbuf.st_size != 0)
 	  p->nstat->empty = 0;
   } else {
@@ -236,8 +237,12 @@ nodestat(const char *name, plan_t *p,
 		  break;
 		}
 	  closedir(dirp);
-	}
 	/* code from FreeBSD find(1). */
+    } else {
+    /* we can't access the dir, but we'll assume the  */
+    /* dir is NOT empty, just like 'find' does.       */
+       p->nstat->empty = 0;
+    }
   }
   
   return (0);
